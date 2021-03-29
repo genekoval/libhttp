@@ -13,6 +13,10 @@ namespace http {
         curl_easy_cleanup(handle);
     }
 
+    auto response::json() -> nlohmann::json {
+        return nlohmann::json::parse(buffer);
+    }
+
     auto response::length() -> long {
         const auto len = 0L;
         get(CURLINFO_CONTENT_LENGTH_DOWNLOAD, &len);

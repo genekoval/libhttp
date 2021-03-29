@@ -1,11 +1,13 @@
 #pragma once
 
 #include <curl/curl.h>
+#include <nlohmann/json.hpp>
 #include <string>
 
 namespace http {
     enum {
-        GET
+        GET,
+        PUT
     };
 
     struct options {
@@ -23,6 +25,8 @@ namespace http {
     public:
         response(CURL* handle, std::string&& buffer);
         ~response();
+
+        auto json() -> nlohmann::json;
 
         auto length() -> long;
 

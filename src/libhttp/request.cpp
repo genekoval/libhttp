@@ -5,8 +5,9 @@
 #include <stdexcept>
 
 namespace http::internal {
-    constexpr auto methods = std::array<CURLoption, 1> {
-        CURLOPT_HTTPGET
+    constexpr auto methods = std::array<CURLoption, 2> {
+        CURLOPT_HTTPGET,
+        CURLOPT_PUT
     };
 
     static auto write_callback(
