@@ -15,8 +15,8 @@ namespace http::internal {
         size_t nmemb,
         void* userdata
     ) -> size_t {
-        auto* res = reinterpret_cast<response*>(userdata);
-        res->receive(std::string_view(ptr, nmemb));
+        auto* buffer = reinterpret_cast<std::string*>(userdata);
+        buffer->append(std::string_view(ptr, nmemb));
 
         return nmemb;
     }
@@ -32,10 +32,10 @@ namespace http::internal {
     }
 
     auto request::perform() -> response {
-        auto res = response(handle);
+        auto buffer = std::string();
 
         set(CURLOPT_WRITEFUNCTION, write_callback);
-        set(CURLOPT_WRITEDATA, &res);
+        set(CURLOPT_WRITEDATA, &buffer);
 
         const auto code = curl_easy_perform(handle);
 
@@ -46,7 +46,7 @@ namespace http::internal {
             ));
         }
 
-        return res;
+        return response(handle, std::move(buffer));
     }
 
     auto request::url(const std::string& url_string) -> void {

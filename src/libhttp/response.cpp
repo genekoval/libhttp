@@ -4,7 +4,10 @@ namespace http {
     constexpr auto success_range_start = 200;
     constexpr auto success_range_end = 299;
 
-    response::response(CURL* handle) : handle(handle) {}
+    response::response(CURL* handle, std::string&& buffer) :
+        buffer(std::move(buffer)),
+        handle(handle)
+    {}
 
     response::~response() {
         curl_easy_cleanup(handle);
@@ -19,10 +22,6 @@ namespace http {
     auto response::ok() -> bool {
         const auto code = status();
         return code >= success_range_start && code <= success_range_end;
-    }
-
-    auto response::receive(std::string_view data) -> void {
-        buffer += data;
     }
 
     auto response::status() -> long {

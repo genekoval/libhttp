@@ -21,14 +21,12 @@ namespace http {
             curl_easy_getinfo(handle, info, t);
         }
     public:
-        response(CURL* handle);
+        response(CURL* handle, std::string&& buffer);
         ~response();
 
         auto length() -> long;
 
         auto ok() -> bool;
-
-        auto receive(std::string_view data) -> void;
 
         auto status() -> long;
 
