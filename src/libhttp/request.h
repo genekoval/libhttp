@@ -18,7 +18,7 @@ namespace http::internal {
                 throw std::runtime_error(fmt::format(
                     "failed to set cURL option ({}): returned code ({})",
                     opt,
-                    t
+                    result
                 ));
             }
         }

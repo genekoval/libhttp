@@ -13,6 +13,7 @@ namespace http {
     };
 
     class response {
+        std::string buffer;
         CURL* handle;
 
         template <typename T>
@@ -23,9 +24,15 @@ namespace http {
         response(CURL* handle);
         ~response();
 
+        auto length() -> long;
+
         auto ok() -> bool;
 
+        auto receive(std::string_view data) -> void;
+
         auto status() -> long;
+
+        auto text() -> std::string;
     };
 
     struct client {

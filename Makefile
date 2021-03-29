@@ -10,6 +10,7 @@ library = $(project)
 $(library).type = shared
 define $(library).libs
  $(curl.libs)
+ ext++
  fmt
 endef
 

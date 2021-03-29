@@ -9,6 +9,18 @@ namespace http::internal {
         CURLOPT_HTTPGET
     };
 
+    static auto write_callback(
+        char* ptr,
+        size_t size,
+        size_t nmemb,
+        void* userdata
+    ) -> size_t {
+        auto* res = reinterpret_cast<response*>(userdata);
+        res->receive(std::string_view(ptr, nmemb));
+
+        return nmemb;
+    }
+
     request::request() : handle(curl_easy_init()) {
         if (!handle) {
             throw std::runtime_error("failed to create cURL handle");
@@ -20,6 +32,11 @@ namespace http::internal {
     }
 
     auto request::perform() -> response {
+        auto res = response(handle);
+
+        set(CURLOPT_WRITEFUNCTION, write_callback);
+        set(CURLOPT_WRITEDATA, &res);
+
         const auto code = curl_easy_perform(handle);
 
         if (code != CURLE_OK) {
@@ -29,7 +46,7 @@ namespace http::internal {
             ));
         }
 
-        return response(handle);
+        return res;
     }
 
     auto request::url(const std::string& url_string) -> void {
