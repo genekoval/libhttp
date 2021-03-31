@@ -11,6 +11,7 @@ namespace http {
     };
 
     struct options {
+        std::string body;
         int method;
     };
 

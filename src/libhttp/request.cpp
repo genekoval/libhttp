@@ -7,8 +7,27 @@
 namespace http::internal {
     constexpr auto methods = std::array<CURLoption, 2> {
         CURLOPT_HTTPGET,
-        CURLOPT_PUT
+        CURLOPT_UPLOAD
     };
+
+    static auto read_callback(
+        char* buffer,
+        size_t size,
+        size_t nitems,
+        void* userdata
+    ) -> size_t {
+        auto* body = reinterpret_cast<body_data*>(userdata);
+        const auto& data = body->data;
+
+        const auto max = size * nitems;
+        const auto remaining = data.size() - body->written;
+        const auto bytes = std::min(remaining, max);
+
+        std::memcpy(buffer, &data[body->written], bytes);
+        body->written += bytes;
+
+        return bytes;
+    }
 
     static auto write_callback(
         char* ptr,
@@ -26,6 +45,13 @@ namespace http::internal {
         if (!handle) {
             throw std::runtime_error("failed to create cURL handle");
         }
+
+        set(CURLOPT_READFUNCTION, read_callback);
+        set(CURLOPT_WRITEFUNCTION, write_callback);
+    }
+
+    auto request::body(std::string&& data) -> void {
+        m_body.data = std::move(data);
     }
 
     auto request::method(int mtd) -> void {
@@ -35,7 +61,7 @@ namespace http::internal {
     auto request::perform() -> response {
         auto buffer = std::string();
 
-        set(CURLOPT_WRITEFUNCTION, write_callback);
+        set(CURLOPT_READDATA, &m_body);
         set(CURLOPT_WRITEDATA, &buffer);
 
         const auto code = curl_easy_perform(handle);

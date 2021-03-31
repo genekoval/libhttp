@@ -30,6 +30,7 @@ namespace http {
         auto req = internal::request();
         req.url(url);
 
+        if (!opts.body.empty()) req.body(std::move(opts.body));
         if (opts.method != GET) req.method(opts.method);
 
         return req.perform();
