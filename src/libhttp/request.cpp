@@ -5,9 +5,14 @@
 #include <stdexcept>
 
 namespace http::internal {
-    constexpr auto methods = std::array<CURLoption, 2> {
+    constexpr auto methods = std::array {
         CURLOPT_HTTPGET,
+        CURLOPT_NOBODY,
         CURLOPT_UPLOAD
+    };
+
+    constexpr auto custom_methods = std::array<const char*, 1> {
+        "DELETE"
     };
 
     static auto read_callback(
@@ -55,7 +60,10 @@ namespace http::internal {
     }
 
     auto request::method(int mtd) -> void {
-        set(methods[mtd], 1L);
+        if (static_cast<std::size_t>(mtd) < methods.size()) {
+            set(methods[mtd], 1L);
+        }
+        else set(CURLOPT_CUSTOMREQUEST, custom_methods[mtd - methods.size()]);
     }
 
     auto request::perform() -> response {

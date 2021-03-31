@@ -7,7 +7,9 @@
 namespace http {
     enum {
         GET,
-        PUT
+        HEAD,
+        PUT,
+        DELETE
     };
 
     struct options {
