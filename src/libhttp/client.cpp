@@ -31,6 +31,11 @@ namespace http {
         req.url(url);
 
         if (!opts.body.empty()) req.body(std::move(opts.body));
+
+        for (const auto& header : opts.headers) {
+            req.header(header.first, header.second);
+        }
+
         if (opts.method != GET) req.method(opts.method);
 
         return req.perform();

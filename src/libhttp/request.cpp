@@ -59,6 +59,10 @@ namespace http::internal {
         m_body.data = std::move(data);
     }
 
+    auto request::header(std::string_view key, std::string_view value) -> void {
+        headers.add(key, value);
+    }
+
     auto request::method(int mtd) -> void {
         if (static_cast<std::size_t>(mtd) < methods.size()) {
             set(methods[mtd], 1L);
@@ -69,6 +73,7 @@ namespace http::internal {
     auto request::perform() -> response {
         auto buffer = std::string();
 
+        if (!headers.empty()) set(CURLOPT_HTTPHEADER, headers.data());
         set(CURLOPT_READDATA, &m_body);
         set(CURLOPT_WRITEDATA, &buffer);
 

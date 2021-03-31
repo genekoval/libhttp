@@ -14,6 +14,7 @@ namespace http {
 
     struct options {
         std::string body;
+        std::vector<std::pair<std::string, std::string>> headers;
         int method;
     };
 
