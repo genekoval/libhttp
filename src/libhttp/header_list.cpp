@@ -1,8 +1,9 @@
-#include "request.h"
+#include <http/request.h>
 
-#include <fmt/format.h>
+#include <curl/curl.h>
+#include <fmt/core.h>
 
-namespace http::internal {
+namespace http {
     header_list::~header_list() { curl_slist_free_all(list); }
 
     auto header_list::add(const char* item) -> void {

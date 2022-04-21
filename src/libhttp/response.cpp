@@ -9,17 +9,13 @@ namespace http {
         handle(handle)
     {}
 
-    response::~response() {
-        curl_easy_cleanup(handle);
-    }
-
     auto response::json() -> nlohmann::json {
         return nlohmann::json::parse(buffer);
     }
 
     auto response::length() -> long {
         const auto len = 0L;
-        get(CURLINFO_CONTENT_LENGTH_DOWNLOAD, &len);
+        curl_easy_getinfo(handle, CURLINFO_CONTENT_LENGTH_DOWNLOAD, &len);
         return len;
     }
 
@@ -30,7 +26,7 @@ namespace http {
 
     auto response::status() -> long {
         auto code = 0L;
-        get(CURLINFO_RESPONSE_CODE, &code);
+        curl_easy_getinfo(handle, CURLINFO_RESPONSE_CODE, &code);
         return code;
     }
 

@@ -1,27 +1,13 @@
-#include "request.h"
+#include <http/request.h>
 
-#include <array>
-#include <fmt/format.h>
-#include <stdexcept>
-
-namespace http::internal {
-    constexpr auto methods = std::array {
-        CURLOPT_HTTPGET,
-        CURLOPT_NOBODY,
-        CURLOPT_UPLOAD
-    };
-
-    constexpr auto custom_methods = std::array<const char*, 1> {
-        "DELETE"
-    };
-
-    static auto read_callback(
+namespace {
+    auto read_callback(
         char* buffer,
         size_t size,
         size_t nitems,
         void* userdata
     ) -> size_t {
-        auto* body = reinterpret_cast<body_data*>(userdata);
+        auto* body = reinterpret_cast<http::body_data*>(userdata);
         const auto& data = body->data;
 
         const auto max = size * nitems;
@@ -34,7 +20,7 @@ namespace http::internal {
         return bytes;
     }
 
-    static auto write_callback(
+    auto write_callback(
         char* ptr,
         size_t size,
         size_t nmemb,
@@ -45,51 +31,65 @@ namespace http::internal {
 
         return nmemb;
     }
+}
 
+namespace http {
     request::request() : handle(curl_easy_init()) {
         if (!handle) {
-            throw std::runtime_error("failed to create cURL handle");
+            throw http::client_error("failed to create curl handle");
         }
 
         set(CURLOPT_READFUNCTION, read_callback);
         set(CURLOPT_WRITEFUNCTION, write_callback);
     }
 
+    request::~request() {
+        curl_easy_cleanup(handle);
+    }
+
     auto request::body(std::string&& data) -> void {
-        m_body.data = std::move(data);
+        body_data.data = std::move(data);
     }
 
     auto request::header(std::string_view key, std::string_view value) -> void {
         headers.add(key, value);
     }
 
-    auto request::method(int mtd) -> void {
-        if (static_cast<std::size_t>(mtd) < methods.size()) {
-            set(methods[mtd], 1L);
+    auto request::method(http::method method) -> void {
+        CURLoption option;
+
+        switch (method) {
+            case http::method::GET: option = CURLOPT_HTTPGET; break;
+            case http::method::HEAD: option = CURLOPT_NOBODY; break;
+            case http::method::POST: option = CURLOPT_POST; break;
+            case http::method::PUT: option = CURLOPT_UPLOAD; break;
         }
-        else set(CURLOPT_CUSTOMREQUEST, custom_methods[mtd - methods.size()]);
+
+        set(option, 1L);
+    }
+
+    auto request::method(std::string_view method) -> void {
+        set(CURLOPT_CUSTOMREQUEST, method.data());
     }
 
     auto request::perform() -> response {
         auto buffer = std::string();
 
         if (!headers.empty()) set(CURLOPT_HTTPHEADER, headers.data());
-        set(CURLOPT_READDATA, &m_body);
+        set(CURLOPT_POSTFIELDS, body_data.data.data());
+        set(CURLOPT_READDATA, &body_data);
         set(CURLOPT_WRITEDATA, &buffer);
 
         const auto code = curl_easy_perform(handle);
 
         if (code != CURLE_OK) {
-            throw std::runtime_error(fmt::format(
-                "cURL request failure: returned ({})",
-                code
-            ));
+            throw client_error("curl: ({}) {}", code, curl_easy_strerror(code));
         }
 
         return response(handle, std::move(buffer));
     }
 
-    auto request::url(const std::string& url_string) -> void {
-        set(CURLOPT_URL, url_string.c_str());
+    auto request::url(std::string_view url_string) -> void {
+        set(CURLOPT_URL, url_string.data());
     }
 }

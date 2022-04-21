@@ -1,2 +1,4 @@
 bin
+lib
 obj
+test/test

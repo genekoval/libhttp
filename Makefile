@@ -8,17 +8,9 @@ curl.libs = $(subst -l,,$(shell $(curl) --libs))
 
 library = $(project)
 $(library).type = shared
-define $(library).libs
- $(curl.libs)
- ext++
- fmt
-endef
+$(library).libs = $(curl.libs) ext++ fmt
 
-define test.libs
- gtest
- gtest_main
- http
-endef
+test.libs = gtest gtest_main http
 
 install := $(library)
 targets := $(install)
