@@ -49,6 +49,7 @@ namespace http {
 
     auto request::body(std::string&& data) -> void {
         body_data.data = std::move(data);
+        set(CURLOPT_POSTFIELDS, body_data.data.data());
     }
 
     auto request::header(std::string_view key, std::string_view value) -> void {
@@ -76,7 +77,6 @@ namespace http {
         auto buffer = std::string();
 
         if (!headers.empty()) set(CURLOPT_HTTPHEADER, headers.data());
-        set(CURLOPT_POSTFIELDS, body_data.data.data());
         set(CURLOPT_READDATA, &body_data);
         set(CURLOPT_WRITEDATA, &buffer);
 
