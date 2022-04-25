@@ -30,6 +30,13 @@ namespace http {
         auto empty() const -> bool;
     };
 
+    struct memory {
+        std::string storage;
+        std::size_t padding = 0;
+
+        auto append(const char* ptr, std::size_t size) -> void;
+    };
+
     class request {
         http::body_data body_data;
         CURL* handle;
@@ -60,7 +67,7 @@ namespace http {
 
         auto method(std::string_view method) -> void;
 
-        auto perform() -> response;
+        auto perform(http::memory& memory) -> response;
 
         auto url(std::string_view url_string) -> void;
     };

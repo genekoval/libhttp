@@ -4,33 +4,17 @@ namespace http {
     constexpr auto success_range_start = 200;
     constexpr auto success_range_end = 299;
 
-    response::response(CURL* handle, std::string&& buffer) :
-        buffer(std::move(buffer)),
-        handle(handle)
-    {}
-
-    auto response::json() -> nlohmann::json {
-        return nlohmann::json::parse(buffer);
-    }
-
-    auto response::length() -> long {
-        const auto len = 0L;
-        curl_easy_getinfo(handle, CURLINFO_CONTENT_LENGTH_DOWNLOAD, &len);
-        return len;
+    response::response(CURL* handle) : handle(handle) {
+        curl_easy_getinfo(handle, CURLINFO_RESPONSE_CODE, &response_code);
     }
 
     auto response::ok() -> bool {
-        const auto code = status();
-        return code >= success_range_start && code <= success_range_end;
+        return
+            response_code >= success_range_start &&
+            response_code <= success_range_end;
     }
 
     auto response::status() -> long {
-        auto code = 0L;
-        curl_easy_getinfo(handle, CURLINFO_RESPONSE_CODE, &code);
-        return code;
-    }
-
-    auto response::text() -> std::string {
-        return buffer;
+        return response_code;
     }
 }

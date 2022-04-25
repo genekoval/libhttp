@@ -26,14 +26,23 @@ namespace {
         size_t nmemb,
         void* userdata
     ) -> size_t {
-        auto* buffer = reinterpret_cast<std::string*>(userdata);
-        buffer->append(std::string_view(ptr, nmemb));
-
+        auto* memory = reinterpret_cast<http::memory*>(userdata);
+        memory->append(ptr, nmemb);
         return nmemb;
     }
 }
 
 namespace http {
+    auto memory::append(const char* ptr, std::size_t size) -> void {
+        const auto required = storage.size() + padding + size;
+
+        if (storage.capacity() < required) {
+            storage.reserve(required);
+        }
+
+        storage.append(ptr, size);
+    }
+
     request::request() : handle(curl_easy_init()) {
         if (!handle) {
             throw http::client_error("failed to create curl handle");
@@ -73,12 +82,12 @@ namespace http {
         set(CURLOPT_CUSTOMREQUEST, method.data());
     }
 
-    auto request::perform() -> response {
-        auto buffer = std::string();
+    auto request::perform(http::memory& memory) -> response {
+        memory.storage.clear();
 
         if (!headers.empty()) set(CURLOPT_HTTPHEADER, headers.data());
         set(CURLOPT_READDATA, &body_data);
-        set(CURLOPT_WRITEDATA, &buffer);
+        set(CURLOPT_WRITEDATA, &memory);
 
         const auto code = curl_easy_perform(handle);
 
@@ -86,7 +95,7 @@ namespace http {
             throw client_error("curl: ({}) {}", code, curl_easy_strerror(code));
         }
 
-        return response(handle, std::move(buffer));
+        return response(handle);
     }
 
     auto request::url(std::string_view url_string) -> void {

@@ -1,25 +1,16 @@
 #pragma once
 
 #include <curl/curl.h>
-#include <nlohmann/json.hpp>
 
 namespace http {
-    using json = nlohmann::json;
-
     class response {
-        std::string buffer;
         CURL* handle;
+        long response_code;
     public:
-        response(CURL* handle, std::string&& buffer);
-
-        auto json() -> http::json;
-
-        auto length() -> long;
+        response(CURL* handle);
 
         auto ok() -> bool;
 
         auto status() -> long;
-
-        auto text() -> std::string;
     };
 }
