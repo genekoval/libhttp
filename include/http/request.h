@@ -42,7 +42,7 @@ namespace http {
     class request {
         http::body_data body_data;
         CURL* handle;
-        header_list headers;
+        http::header_list header_list;
         http::url url_data;
 
         template <typename T>
@@ -58,13 +58,15 @@ namespace http {
             }
         }
     public:
+        using header_type = std::pair<std::string_view, std::string_view>;
+
         request();
 
         ~request();
 
         auto body(std::string&& data) -> void;
 
-        auto header(std::string_view key, std::string_view value) -> void;
+        auto headers(std::initializer_list<header_type> headers) -> void;
 
         auto method(http::method method) -> void;
 

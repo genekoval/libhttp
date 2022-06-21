@@ -49,7 +49,6 @@ namespace http {
         }
 
         set(CURLOPT_CURLU, url_data.data());
-        set(CURLOPT_HTTPHEADER, headers.data());
         set(CURLOPT_READFUNCTION, read_callback);
         set(CURLOPT_WRITEFUNCTION, write_callback);
     }
@@ -63,8 +62,14 @@ namespace http {
         set(CURLOPT_POSTFIELDS, body_data.data.data());
     }
 
-    auto request::header(std::string_view key, std::string_view value) -> void {
-        headers.add(key, value);
+    auto request::headers(std::initializer_list<header_type> headers) -> void {
+        if (!header_list.empty()) header_list = http::header_list();
+
+        for (const auto& header : headers) {
+            header_list.add(header.first, header.second);
+        }
+
+        set(CURLOPT_HTTPHEADER, header_list.data());
     }
 
     auto request::method(http::method method) -> void {

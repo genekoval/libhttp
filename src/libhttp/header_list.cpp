@@ -17,7 +17,11 @@ namespace http {
         add(fmt::format("{}: {}", key, value).c_str());
     }
 
-    auto header_list::data() -> curl_slist* { return list; }
+    auto header_list::data() -> curl_slist* {
+        return list;
+    }
 
-    auto header_list::empty() const -> bool { return list == nullptr; }
+    auto header_list::empty() const -> bool {
+        return list == nullptr;
+    }
 }
