@@ -90,6 +90,7 @@ namespace http {
         set(CURLOPT_WRITEDATA, &memory);
 
         const auto code = curl_easy_perform(handle);
+        body_data.written = 0;
 
         if (code != CURLE_OK) {
             throw client_error("curl: ({}) {}", code, curl_easy_strerror(code));
