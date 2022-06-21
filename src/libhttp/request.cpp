@@ -65,7 +65,7 @@ namespace http {
     auto request::headers(std::initializer_list<header_type> headers) -> void {
         if (!header_list.empty()) header_list = http::header_list();
 
-        for (const auto [key, value] : headers) {
+        for (const auto& [key, value] : headers) {
             header_list.add(key, value);
         }
 
