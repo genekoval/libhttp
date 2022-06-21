@@ -18,7 +18,7 @@ protected:
 auto mem = http::memory();
 
 TEST_F(HttpTest, ReadText) {
-    req.url().set(CURLUPART_PATH, "/");
+    req.url().path("/");
 
     auto res = req.perform(mem);
 
@@ -27,7 +27,7 @@ TEST_F(HttpTest, ReadText) {
 }
 
 TEST_F(HttpTest, Send) {
-    req.url().set(CURLUPART_PATH, "/echo");
+    req.url().path("/echo");
     req.method(http::method::POST);
     req.body("Hello, world!");
 
@@ -39,7 +39,7 @@ TEST_F(HttpTest, Send) {
 }
 
 TEST_F(HttpTest, GetBodyData) {
-    req.url().set(CURLUPART_PATH, "/echo");
+    req.url().path("/echo");
     req.method(http::method::POST);
     req.method("GET");
     req.body("Body Data");

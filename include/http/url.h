@@ -1,6 +1,7 @@
 #pragma once
 
 #include <curl/curl.h>
+#include <fmt/core.h>
 #include <string>
 
 namespace http {
@@ -19,6 +20,14 @@ namespace http {
         auto data() -> CURLU*;
 
         auto get(CURLUPart what, unsigned int flags = 0) -> std::string_view;
+
+        template <typename... Args>
+        auto path(std::string_view format_string, Args&&... args) -> void {
+            set(CURLUPART_PATH, fmt::format(
+                fmt::runtime(format_string),
+                std::forward<Args>(args)...
+            ));
+        }
 
         auto set(
             CURLUPart part,

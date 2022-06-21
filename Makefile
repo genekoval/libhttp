@@ -11,7 +11,7 @@ $(library).type = shared
 $(library).libs = $(curl.libs) ext++ fmt
 
 test.deps = http
-test.libs = gtest gtest_main http
+test.libs = fmt gtest gtest_main http
 
 install := $(library)
 targets := $(install)
