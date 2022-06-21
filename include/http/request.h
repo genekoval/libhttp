@@ -1,5 +1,7 @@
 #pragma once
 
+#include "url.h"
+
 #include <http/error.h>
 #include <http/response.h>
 
@@ -41,6 +43,7 @@ namespace http {
         http::body_data body_data;
         CURL* handle;
         header_list headers;
+        http::url url_data;
 
         template <typename T>
         auto set(CURLoption option, T t) -> void {
@@ -69,6 +72,6 @@ namespace http {
 
         auto perform(http::memory& memory) -> response;
 
-        auto url(std::string_view url_string) -> void;
+        auto url() -> http::url&;
     };
 }

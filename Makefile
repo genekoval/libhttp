@@ -10,6 +10,7 @@ library = $(project)
 $(library).type = shared
 $(library).libs = $(curl.libs) ext++ fmt
 
+test.deps = http
 test.libs = gtest gtest_main http
 
 install := $(library)

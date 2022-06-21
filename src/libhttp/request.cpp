@@ -48,6 +48,7 @@ namespace http {
             throw http::client_error("failed to create curl handle");
         }
 
+        set(CURLOPT_CURLU, url_data.data());
         set(CURLOPT_HTTPHEADER, headers.data());
         set(CURLOPT_READFUNCTION, read_callback);
         set(CURLOPT_WRITEFUNCTION, write_callback);
@@ -99,7 +100,7 @@ namespace http {
         return response(handle);
     }
 
-    auto request::url(std::string_view url_string) -> void {
-        set(CURLOPT_URL, url_string.data());
+    auto request::url() -> http::url& {
+        return url_data;
     }
 }

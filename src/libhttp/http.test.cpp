@@ -2,12 +2,23 @@
 
 #include <gtest/gtest.h>
 
+constexpr auto server = "http://127.0.0.1:8080";
+
 const auto client = http::client();
+
+auto req = http::request();
+
+class HttpTest : public testing::Test {
+protected:
+    static auto SetUpTestSuite() -> void {
+        req.url().set(CURLUPART_URL, server);
+    }
+};
+
 auto mem = http::memory();
 
-TEST(HttpTest, ReadText) {
-    auto req = http::request();
-    req.url("http://127.0.0.1:8080/");
+TEST_F(HttpTest, ReadText) {
+    req.url().set(CURLUPART_PATH, "/");
 
     auto res = req.perform(mem);
 
@@ -15,9 +26,8 @@ TEST(HttpTest, ReadText) {
     ASSERT_EQ("A Test Server!", mem.storage);
 }
 
-TEST(HttpTest, Send) {
-    auto req = http::request();
-    req.url("http://127.0.0.1:8080/echo");
+TEST_F(HttpTest, Send) {
+    req.url().set(CURLUPART_PATH, "/echo");
     req.method(http::method::POST);
     req.body("Hello, world!");
 
@@ -28,9 +38,8 @@ TEST(HttpTest, Send) {
     ASSERT_EQ("Your request (POST): Hello, world!", mem.storage);
 }
 
-TEST(HttpTest, GetBodyData) {
-    auto req = http::request();
-    req.url("http://127.0.0.1:8080/echo");
+TEST_F(HttpTest, GetBodyData) {
+    req.url().set(CURLUPART_PATH, "/echo");
     req.method(http::method::POST);
     req.method("GET");
     req.body("Body Data");
