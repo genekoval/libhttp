@@ -8,7 +8,7 @@ namespace http {
         template <typename ...Args>
         client_error(std::string_view format_str, Args&&... args) :
             std::runtime_error(fmt::format(
-                format_str,
+                fmt::runtime(format_str),
                 std::forward<Args>(args)...
             ))
         {}

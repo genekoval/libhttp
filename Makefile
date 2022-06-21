@@ -15,4 +15,6 @@ test.libs = gtest gtest_main http
 install := $(library)
 targets := $(install)
 
+install.directories = $(include)/http
+
 include mkbuild/base.mk
