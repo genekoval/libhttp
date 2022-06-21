@@ -48,6 +48,7 @@ namespace http {
             throw http::client_error("failed to create curl handle");
         }
 
+        set(CURLOPT_HTTPHEADER, headers.data());
         set(CURLOPT_READFUNCTION, read_callback);
         set(CURLOPT_WRITEFUNCTION, write_callback);
     }
@@ -85,7 +86,6 @@ namespace http {
     auto request::perform(http::memory& memory) -> response {
         memory.storage.clear();
 
-        if (!headers.empty()) set(CURLOPT_HTTPHEADER, headers.data());
         set(CURLOPT_READDATA, &body_data);
         set(CURLOPT_WRITEDATA, &memory);
 
