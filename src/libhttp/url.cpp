@@ -29,6 +29,10 @@ namespace http {
         }
     }
 
+    auto url::clear(CURLUPart part) -> void {
+        set(part, nullptr);
+    }
+
     auto url::data() -> CURLU* {
         return handle;
     }

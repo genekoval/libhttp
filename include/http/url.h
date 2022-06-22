@@ -17,6 +17,17 @@ namespace http {
 
         ~url();
 
+        template <typename T>
+        auto append_query(std::string_view key, const T& value) -> void {
+            set(
+                CURLUPART_QUERY,
+                fmt::format("{}={}", key, value),
+                CURLU_APPENDQUERY
+            );
+        }
+
+        auto clear(CURLUPart part) -> void;
+
         auto data() -> CURLU*;
 
         auto get(CURLUPart what, unsigned int flags = 0) -> std::string_view;
