@@ -14,7 +14,7 @@ namespace http {
     };
 
     struct body_data {
-        std::string data;
+        std::string_view data;
         std::size_t written = 0;
     };
 
@@ -64,7 +64,7 @@ namespace http {
 
         ~request();
 
-        auto body(std::string&& data) -> void;
+        auto body(std::string_view data) -> void;
 
         auto headers(std::initializer_list<header_type> headers) -> void;
 

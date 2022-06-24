@@ -8,7 +8,7 @@ namespace {
         void* userdata
     ) -> size_t {
         auto* body = reinterpret_cast<http::body_data*>(userdata);
-        const auto& data = body->data;
+        auto data = body->data;
 
         const auto max = size * nitems;
         const auto remaining = data.size() - body->written;
@@ -57,9 +57,9 @@ namespace http {
         curl_easy_cleanup(handle);
     }
 
-    auto request::body(std::string&& data) -> void {
-        body_data.data = std::move(data);
-        set(CURLOPT_POSTFIELDS, body_data.data.data());
+    auto request::body(std::string_view data) -> void {
+        body_data.data = data;
+        set(CURLOPT_POSTFIELDS, nullptr); // Get data from the read callback
     }
 
     auto request::headers(std::initializer_list<header_type> headers) -> void {
