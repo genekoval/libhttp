@@ -39,7 +39,19 @@ namespace http {
         auto append(const char* ptr, std::size_t size) -> void;
     };
 
+    class request;
+
+    class method_guard final {
+        http::request* request;
+    public:
+        method_guard(http::request* request);
+
+        ~method_guard();
+    };
+
     class request {
+        friend class method_guard;
+
         http::body_data body_data;
         CURL* handle;
         http::header_list header_list;
@@ -70,7 +82,11 @@ namespace http {
 
         auto method(http::method method) -> void;
 
-        auto method(std::string_view method) -> void;
+        [[nodiscard("return value's destructor resets custom method")]]
+        auto method(
+            http::method method,
+            std::string_view custom
+        ) -> method_guard;
 
         auto perform(http::memory& memory) -> response;
 

@@ -85,8 +85,14 @@ namespace http {
         set(option, 1L);
     }
 
-    auto request::method(std::string_view method) -> void {
-        set(CURLOPT_CUSTOMREQUEST, method.data());
+    auto request::method(
+        http::method method,
+        std::string_view custom
+    ) -> method_guard {
+        this->method(method);
+        set(CURLOPT_CUSTOMREQUEST, custom.data());
+
+        return method_guard(this);
     }
 
     auto request::perform(http::memory& memory) -> response {

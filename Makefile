@@ -8,7 +8,7 @@ curl.libs = $(subst -l,,$(shell $(curl) --libs))
 
 library = $(project)
 $(library).type = shared
-$(library).libs = $(curl.libs) ext++ fmt
+$(library).libs = $(curl.libs) ext++ fmt timber
 
 test.deps = http
 test.libs = fmt gtest gtest_main http

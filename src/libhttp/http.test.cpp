@@ -40,8 +40,7 @@ TEST_F(HttpTest, Send) {
 
 TEST_F(HttpTest, GetBodyData) {
     req.url().path("/echo");
-    req.method(http::method::POST);
-    req.method("GET");
+    const auto method = req.method(http::method::POST, "GET");
     req.body("Body Data");
 
     auto res = req.perform(mem);
