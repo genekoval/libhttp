@@ -1,5 +1,7 @@
 #pragma once
 
+#include <http/string.h>
+
 #include <curl/curl.h>
 #include <fmt/core.h>
 #include <string>
@@ -7,7 +9,6 @@
 namespace http {
     class url final {
         CURLU* handle;
-        char* part = nullptr;
 
         auto check_return_code(CURLUcode code) -> void;
     public:
@@ -30,7 +31,7 @@ namespace http {
 
         auto data() -> CURLU*;
 
-        auto get(CURLUPart what, unsigned int flags = 0) -> std::string_view;
+        auto get(CURLUPart what, unsigned int flags = 0) -> string;
 
         template <typename... Args>
         auto path(std::string_view format_string, Args&&... args) -> void {

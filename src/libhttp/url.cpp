@@ -16,7 +16,6 @@ namespace http {
 
     url::~url() {
         curl_url_cleanup(handle);
-        curl_free(part);
     }
 
     auto url::check_return_code(CURLUcode code) -> void {
@@ -37,10 +36,10 @@ namespace http {
         return handle;
     }
 
-    auto url::get(CURLUPart what, unsigned int flags) -> std::string_view {
-        curl_free(part);
+    auto url::get(CURLUPart what, unsigned int flags) -> string {
+        char* part = nullptr;
         check_return_code(curl_url_get(handle, what, &part, flags));
-        return part;
+        return string(part);
     }
 
     auto url::set(
