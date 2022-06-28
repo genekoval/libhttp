@@ -82,7 +82,12 @@ namespace http {
             case http::method::PUT: option = CURLOPT_UPLOAD; break;
         }
 
-        set(option, 1L);
+        if (option != current_method) {
+            set(current_method, 0L);
+            set(option, 1L);
+
+            current_method = option;
+        }
     }
 
     auto request::method(

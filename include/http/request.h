@@ -56,6 +56,7 @@ namespace http {
         CURL* handle;
         http::header_list header_list;
         http::url url_data;
+        CURLoption current_method = CURLOPT_HTTPGET;
 
         template <typename T>
         auto set(CURLoption option, T t) -> void {
@@ -63,9 +64,9 @@ namespace http {
 
             if (result != CURLE_OK) {
                 throw http::client_error(
-                    "failed to set curl option ({}): returned code ({})",
+                    "failed to set curl option ({}): {}",
                     option,
-                    result
+                    curl_easy_strerror(result)
                 );
             }
         }
