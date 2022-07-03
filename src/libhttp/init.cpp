@@ -1,10 +1,10 @@
-#include <http/client.h>
+#include <http/init.h>
 #include <http/error.h>
 
 #include <curl/curl.h>
 
 namespace http {
-    client::client() {
+    init::init() {
         const auto code = curl_global_init(CURL_GLOBAL_ALL);
 
         if (code != 0) {
@@ -16,7 +16,7 @@ namespace http {
         }
     }
 
-    client::~client() {
+    init::~init() {
         curl_global_cleanup();
     }
 }
