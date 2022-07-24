@@ -18,4 +18,6 @@ targets := $(install)
 
 install.directories = $(include)/http
 
+files = $(include) $(src) test Makefile VERSION
+
 include mkbuild/base.mk
