@@ -32,13 +32,6 @@ namespace http {
         auto empty() const -> bool;
     };
 
-    struct memory {
-        std::string storage;
-        std::size_t padding = 0;
-
-        auto append(const char* ptr, std::size_t size) -> void;
-    };
-
     class request;
 
     class method_guard final {
@@ -89,7 +82,7 @@ namespace http {
             std::string_view custom
         ) -> method_guard;
 
-        auto perform(http::memory& memory) -> response;
+        auto perform(std::string& data) -> response;
 
         auto url() -> http::url&;
     };

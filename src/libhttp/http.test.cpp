@@ -15,15 +15,14 @@ protected:
     }
 };
 
-auto mem = http::memory();
-
 TEST_F(HttpTest, ReadText) {
     req.url().path("/");
 
-    auto res = req.perform(mem);
+    auto data = std::string();
+    auto res = req.perform(data);
 
     ASSERT_TRUE(res.ok());
-    ASSERT_EQ("A Test Server!", mem.storage);
+    ASSERT_EQ("A Test Server!", data);
 }
 
 TEST_F(HttpTest, Send) {
@@ -31,11 +30,12 @@ TEST_F(HttpTest, Send) {
     req.method(http::method::POST);
     req.body("Hello, world!");
 
-    auto res = req.perform(mem);
+    auto data = std::string();
+    auto res = req.perform(data);
 
     ASSERT_TRUE(res.ok());
 
-    ASSERT_EQ("Your request (POST): Hello, world!", mem.storage);
+    ASSERT_EQ("Your request (POST): Hello, world!", data);
 }
 
 TEST_F(HttpTest, GetBodyData) {
@@ -43,9 +43,10 @@ TEST_F(HttpTest, GetBodyData) {
     const auto method = req.method(http::method::POST, "GET");
     req.body("Body Data");
 
-    auto res = req.perform(mem);
+    auto data = std::string();
+    auto res = req.perform(data);
 
     ASSERT_TRUE(res.ok());
 
-    ASSERT_EQ("Your request (GET): Body Data", mem.storage);
+    ASSERT_EQ("Your request (GET): Body Data", data);
 }

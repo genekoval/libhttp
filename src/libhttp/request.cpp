@@ -26,23 +26,13 @@ namespace {
         size_t nmemb,
         void* userdata
     ) -> size_t {
-        auto* memory = reinterpret_cast<http::memory*>(userdata);
-        memory->append(ptr, nmemb);
+        auto& memory = *reinterpret_cast<std::string*>(userdata);
+        memory.append(ptr, nmemb);
         return nmemb;
     }
 }
 
 namespace http {
-    auto memory::append(const char* ptr, std::size_t size) -> void {
-        const auto required = storage.size() + padding + size;
-
-        if (storage.capacity() < required) {
-            storage.reserve(required);
-        }
-
-        storage.append(ptr, size);
-    }
-
     request::request() : handle(curl_easy_init()) {
         if (!handle) {
             throw http::client_error("failed to create curl handle");
@@ -100,11 +90,11 @@ namespace http {
         return method_guard(this);
     }
 
-    auto request::perform(http::memory& memory) -> response {
-        memory.storage.clear();
+    auto request::perform(std::string& data) -> response {
+        data.clear();
 
         set(CURLOPT_READDATA, &body_data);
-        set(CURLOPT_WRITEDATA, &memory);
+        set(CURLOPT_WRITEDATA, &data);
 
         const auto code = curl_easy_perform(handle);
         body_data.written = 0;
