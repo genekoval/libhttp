@@ -46,6 +46,7 @@ namespace http {
         friend class method_guard;
 
         http::body_data body_data;
+        std::string buffer;
         CURL* handle;
         http::header_list header_list;
         http::url url_data;
@@ -82,7 +83,7 @@ namespace http {
             std::string_view custom
         ) -> method_guard;
 
-        auto perform(std::string& data) -> response;
+        auto perform() -> response;
 
         auto url() -> http::url&;
     };

@@ -26,8 +26,8 @@ namespace {
         size_t nmemb,
         void* userdata
     ) -> size_t {
-        auto& memory = *reinterpret_cast<std::string*>(userdata);
-        memory.append(ptr, nmemb);
+        auto& buffer = *reinterpret_cast<std::string*>(userdata);
+        buffer.append(ptr, nmemb);
         return nmemb;
     }
 }
@@ -90,11 +90,11 @@ namespace http {
         return method_guard(this);
     }
 
-    auto request::perform(std::string& data) -> response {
-        data.clear();
+    auto request::perform() -> response {
+        buffer.clear();
 
         set(CURLOPT_READDATA, &body_data);
-        set(CURLOPT_WRITEDATA, &data);
+        set(CURLOPT_WRITEDATA, &buffer);
 
         const auto code = curl_easy_perform(handle);
         body_data.written = 0;
@@ -103,7 +103,7 @@ namespace http {
             throw client_error("curl: ({}) {}", code, curl_easy_strerror(code));
         }
 
-        return response(handle);
+        return response(handle, buffer);
     }
 
     auto request::url() -> http::url& {
