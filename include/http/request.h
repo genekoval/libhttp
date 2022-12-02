@@ -2,8 +2,10 @@
 
 #include "url.h"
 
+#include <http/client.hpp>
 #include <http/error.h>
 #include <http/response.h>
+#include <timber/timber>
 
 namespace http {
     enum class method {
@@ -43,7 +45,10 @@ namespace http {
     };
 
     class request {
+        friend class client;
         friend class method_guard;
+
+        friend struct fmt::formatter<request>;
 
         http::body_data body_data;
         std::string buffer;
@@ -64,12 +69,24 @@ namespace http {
                 );
             }
         }
+
+        auto pre_perform() -> void;
+
+        auto post_perform(CURLcode code) -> void;
     public:
         using header_type = std::pair<std::string_view, std::string_view>;
 
         request();
 
+        request(const request&) = delete;
+
+        request(request&& other);
+
         ~request();
+
+        auto operator=(const request&) -> request& = delete;
+
+        auto operator=(request&& other) -> request&;
 
         auto body(std::string_view data) -> void;
 
@@ -85,6 +102,23 @@ namespace http {
 
         auto perform() -> response;
 
+        auto perform(http::client& client) -> ext::task<response>;
+
         auto url() -> http::url&;
+    };
+}
+
+namespace fmt {
+    template <>
+    struct formatter<http::request> {
+        template <typename ParseContext>
+        constexpr auto parse(ParseContext& ctx) {
+            return ctx.begin();
+        }
+
+        template <typename FormatContext>
+        auto format(const http::request& request, FormatContext& ctx) {
+            return format_to(ctx.out(), "request ({})", ptr(request.handle));
+        }
     };
 }

@@ -16,7 +16,13 @@ namespace http {
 
         url(const url& other);
 
+        url(url&& other);
+
         ~url();
+
+        auto operator=(const url& other) -> url&;
+
+        auto operator=(url&& other) -> url&;
 
         template <typename T>
         auto append_query(std::string_view key, const T& value) -> void {

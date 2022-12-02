@@ -1,6 +1,8 @@
 #include <http/error.h>
 #include <http/url.h>
 
+#include <utility>
+
 namespace http {
     url::url() : handle(curl_url()) {
         if (!handle) {
@@ -14,8 +16,20 @@ namespace http {
         }
     }
 
+    url::url(url&& other) : handle(std::exchange(other.handle, nullptr)) {}
+
     url::~url() {
         curl_url_cleanup(handle);
+    }
+
+    auto url::operator=(const url& other) -> url& {
+        handle = curl_url_dup(other.handle);
+        return *this;
+    }
+
+    auto url::operator=(url&& other) -> url& {
+        handle = std::exchange(other.handle, nullptr);
+        return *this;
     }
 
     auto url::check_return_code(CURLUcode code) -> void {

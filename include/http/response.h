@@ -6,7 +6,6 @@
 namespace http {
     class response {
         std::string_view body_data;
-        CURL* handle;
         long response_code;
     public:
         response(CURL* handle, std::string_view body);

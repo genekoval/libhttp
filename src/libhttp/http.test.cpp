@@ -16,37 +16,44 @@ protected:
 };
 
 TEST_F(HttpTest, ReadText) {
-    req.url().path("/");
+    netcore::async([]() -> ext::task<> {
+        auto client = http::client();
 
-    auto data = std::string();
-    auto res = req.perform(data);
+        req.url().path("/");
 
-    ASSERT_TRUE(res.ok());
-    ASSERT_EQ("A Test Server!", data);
+        auto res = co_await req.perform(client);
+
+        EXPECT_TRUE(res.ok());
+        EXPECT_EQ("A Test Server!", res.body());
+    }());
 }
 
 TEST_F(HttpTest, Send) {
-    req.url().path("/echo");
-    req.method(http::method::POST);
-    req.body("Hello, world!");
+    netcore::async([]() -> ext::task<> {
+        auto client = http::client();
 
-    auto data = std::string();
-    auto res = req.perform(data);
+        req.url().path("/echo");
+        req.method(http::method::POST);
+        req.body("Hello, world!");
 
-    ASSERT_TRUE(res.ok());
+        auto res = co_await req.perform(client);
 
-    ASSERT_EQ("Your request (POST): Hello, world!", data);
+        EXPECT_TRUE(res.ok());
+        EXPECT_EQ("Your request (POST): Hello, world!", res.body());
+    }());
 }
 
 TEST_F(HttpTest, GetBodyData) {
-    req.url().path("/echo");
-    const auto method = req.method(http::method::POST, "GET");
-    req.body("Body Data");
+    netcore::async([]() -> ext::task<> {
+        auto client = http::client();
 
-    auto data = std::string();
-    auto res = req.perform(data);
+        req.url().path("/echo");
+        const auto method = req.method(http::method::POST, "GET");
+        req.body("Body Data");
 
-    ASSERT_TRUE(res.ok());
+        auto res = co_await req.perform(client);
 
-    ASSERT_EQ("Your request (GET): Body Data", data);
+        EXPECT_TRUE(res.ok());
+        EXPECT_EQ("Your request (GET): Body Data", res.body());
+    }());
 }

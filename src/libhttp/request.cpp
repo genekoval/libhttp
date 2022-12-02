@@ -34,17 +34,35 @@ namespace {
 
 namespace http {
     request::request() : handle(curl_easy_init()) {
-        if (!handle) {
-            throw http::client_error("failed to create curl handle");
-        }
+        if (!handle) throw client_error("failed to create curl easy handle");
 
         set(CURLOPT_CURLU, url_data.data());
         set(CURLOPT_READFUNCTION, read_callback);
         set(CURLOPT_WRITEFUNCTION, write_callback);
     }
 
+    request::request(request&& other) :
+        body_data(std::move(other.body_data)),
+        buffer(std::move(other.buffer)),
+        handle(std::exchange(other.handle, nullptr)),
+        header_list(std::exchange(other.header_list, {})),
+        url_data(std::exchange(other.url_data, {})),
+        current_method(other.current_method)
+    {}
+
     request::~request() {
         curl_easy_cleanup(handle);
+    }
+
+    auto request::operator=(request&& other) -> request& {
+        body_data = std::move(other.body_data);
+        buffer = std::move(other.buffer);
+        handle = std::exchange(other.handle, nullptr);
+        header_list = std::exchange(other.header_list, {});
+        url_data = std::move(other.url_data);
+        current_method = other.current_method;
+
+        return *this;
     }
 
     auto request::body(std::string_view data) -> void {
@@ -91,19 +109,56 @@ namespace http {
     }
 
     auto request::perform() -> response {
+        TIMBER_TRACE("{} starting blocking transfer", *this);
+
+        TIMBER_TIMER(
+            fmt::format("{} blocking transfer took", *this),
+            timber::level::trace
+        );
+
+        pre_perform();
+
+        const auto code = curl_easy_perform(handle);
+
+        post_perform(code);
+
+        return response(handle, buffer);
+    }
+
+    auto request::perform(http::client& client) -> ext::task<response> {
+        TIMBER_TRACE(
+            "{} starting nonblocking transfer using {}",
+            *this,
+            client
+        );
+
+        TIMBER_TIMER(
+            fmt::format("{} nonblocking transfer took", *this),
+            timber::level::trace
+        );
+
+        pre_perform();
+
+        const auto code = co_await client.perform(handle);
+
+        post_perform(code);
+
+        co_return response(handle, buffer);
+    }
+
+    auto request::pre_perform() -> void {
         buffer.clear();
 
         set(CURLOPT_READDATA, &body_data);
         set(CURLOPT_WRITEDATA, &buffer);
+    }
 
-        const auto code = curl_easy_perform(handle);
+    auto request::post_perform(CURLcode code) -> void {
         body_data.written = 0;
 
         if (code != CURLE_OK) {
             throw client_error("curl: ({}) {}", code, curl_easy_strerror(code));
         }
-
-        return response(handle, buffer);
     }
 
     auto request::url() -> http::url& {

@@ -4,10 +4,7 @@ namespace http {
     constexpr auto success_range_start = 200;
     constexpr auto success_range_end = 299;
 
-    response::response(CURL* handle, std::string_view body) :
-        body_data(body),
-        handle(handle)
-    {
+    response::response(CURL* handle, std::string_view body) : body_data(body) {
         curl_easy_getinfo(handle, CURLINFO_RESPONSE_CODE, &response_code);
     }
 
