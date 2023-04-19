@@ -2,6 +2,7 @@
 #include <fmt/chrono.h>
 #include <fmt/os.h>
 #include <gtest/gtest.h>
+#include <netcore/netcore>
 #include <timber/timber>
 
 namespace fs = std::filesystem;
@@ -27,6 +28,8 @@ namespace {
 auto main(int argc, char** argv) -> int {
     timber::thread_name = std::string("main");
     timber::log_handler = &file_logger;
+
+    const auto runtime = netcore::runtime();
 
     testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();

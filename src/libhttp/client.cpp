@@ -2,6 +2,7 @@
 #include <http/request.h>
 
 #include <cassert>
+#include <fmt/chrono.h>
 #include <sys/epoll.h>
 #include <timber/timber>
 
@@ -24,10 +25,6 @@ namespace {
 namespace http {
     client::socket::socket(netcore::system_event& event) : event(event) {}
 
-    auto client::socket::deregister() -> void {
-        event.deregister();
-    }
-
     auto client::socket::notify() -> void {
         event.notify();
     }
@@ -39,9 +36,9 @@ namespace http {
         void* userp,
         void* socketp
     ) -> int {
-        TIMBER_TRACE("socket callback ({})", sockfd);
-
         auto& client = *static_cast<http::client*>(userp);
+
+        TIMBER_TRACE("{} socket callback ({})", client, sockfd);
 
         if (!socketp) {
             TIMBER_TRACE(
@@ -59,10 +56,7 @@ namespace http {
         auto& sock = *static_cast<socket*>(socketp);
 
         sock.updates = what;
-        if (what == CURL_POLL_REMOVE) {
-            sock.deregister();
-            sock.notify();
-        }
+        if (what == CURL_POLL_REMOVE) sock.notify();
 
         return 0;
     }
@@ -72,9 +66,9 @@ namespace http {
         long timeout_ms,
         void* userp
     ) -> int {
-        TIMBER_TRACE("timer callback with timeout: {}ms", timeout_ms);
-
         auto& client = *static_cast<http::client*>(userp);
+
+        TIMBER_TRACE("{} timer callback ({:L}ms)", client, timeout_ms);
 
         if (timeout_ms == -1) client.timer.disarm();
         else client.manage_timer(milliseconds(timeout_ms));
@@ -84,6 +78,7 @@ namespace http {
 
     client::client() :
         handle(curl_multi_init()),
+        message_task(wait_for_messages()),
         timer(netcore::timer::monotonic())
     {
         if (!handle) throw client_error("failed to create curl multi handle");
@@ -95,18 +90,22 @@ namespace http {
 
         set(CURLMOPT_TIMERFUNCTION, timer_callback);
         set(CURLMOPT_TIMERDATA, this);
-
-        wait_for_messages();
     }
 
     client::~client() {
-        messages.cancel();
         cleanup();
 
         TIMBER_TRACE("{} destroyed", *this);
     }
 
     auto client::action(curl_socket_t sockfd, int ev_bitmask) -> void {
+        TIMBER_TRACE(
+            "{} curl socket {} action",
+            *this,
+            sockfd == CURL_SOCKET_TIMEOUT ?
+                "timeout" : fmt::format("({})", sockfd)
+        );
+
         const auto code = curl_multi_socket_action(
             handle,
             sockfd,
@@ -120,7 +119,7 @@ namespace http {
         );
 
         TIMBER_TRACE(
-            "{} curl socket {} action complete: {} running handle{}",
+            "{} curl socket {} action complete: {:L} running handle{}",
             *this,
             sockfd == CURL_SOCKET_TIMEOUT ?
                 "timeout" : fmt::format("({})", sockfd),
@@ -285,16 +284,11 @@ namespace http {
         co_return co_await transfer_complete.listen();
     }
 
-    auto client::wait_for_messages() -> ext::detached_task {
+    auto client::wait_for_messages() -> ext::jtask<> {
         while (true) {
             TIMBER_TRACE("{} waiting for messages", *this);
 
-            try {
-                co_await messages.listen();
-            }
-            catch (const netcore::task_canceled&) {
-                co_return;
-            }
+            co_await messages.listen();
 
             read_info();
         }

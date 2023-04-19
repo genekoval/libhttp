@@ -17,8 +17,6 @@ namespace http {
 
             socket(netcore::system_event& event);
 
-            auto deregister() -> void;
-
             auto notify() -> void;
         };
 
@@ -42,6 +40,7 @@ namespace http {
             std::reference_wrapper<netcore::event<CURLcode>>
         > handles;
         netcore::event<> messages;
+        ext::jtask<> message_task;
         int running_handles = 0;
         netcore::timer timer;
 
@@ -76,7 +75,7 @@ namespace http {
             );
         }
 
-        auto wait_for_messages() -> ext::detached_task;
+        auto wait_for_messages() -> ext::jtask<>;
     public:
         client();
 

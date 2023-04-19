@@ -16,7 +16,7 @@ protected:
 };
 
 TEST_F(HttpTest, ReadText) {
-    netcore::async([]() -> ext::task<> {
+    netcore::run([]() -> ext::task<> {
         auto client = http::client();
 
         req.url().path("/");
@@ -29,7 +29,7 @@ TEST_F(HttpTest, ReadText) {
 }
 
 TEST_F(HttpTest, Send) {
-    netcore::async([]() -> ext::task<> {
+    netcore::run([]() -> ext::task<> {
         auto client = http::client();
 
         req.url().path("/echo");
@@ -44,7 +44,7 @@ TEST_F(HttpTest, Send) {
 }
 
 TEST_F(HttpTest, GetBodyData) {
-    netcore::async([]() -> ext::task<> {
+    netcore::run([]() -> ext::task<> {
         auto client = http::client();
 
         req.url().path("/echo");
