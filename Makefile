@@ -6,7 +6,7 @@ STD := c++20
 curl = curl-config
 curl.libs = $(subst -l,,$(shell $(curl) --libs))
 
-common.libs = $(curl.libs) ext++ fmt netcore timber
+common.libs = $(curl.libs) ext++ fmt netcore nghttp2 timber
 
 library = $(project)
 $(library).type = shared
