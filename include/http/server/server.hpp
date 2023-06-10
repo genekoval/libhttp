@@ -7,7 +7,7 @@
 namespace http::server {
     class context {
         const std::size_t buffer_size;
-        router* router;
+        server::router* router;
     public:
         context();
 

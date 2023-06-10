@@ -36,8 +36,8 @@ namespace http::server {
         bool active = false;
         bool open = true;
 
-        request request;
-        response response;
+        server::request request;
+        server::response response;
 
         stream();
 

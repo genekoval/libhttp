@@ -5,7 +5,7 @@
 using namespace std::literals;
 
 namespace {
-    constexpr auto make_nv(
+    auto make_nv(
         std::string_view name,
         std::string_view value,
         std::uint8_t flags = NGHTTP2_NV_FLAG_NONE

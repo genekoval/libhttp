@@ -10,7 +10,7 @@ namespace http::server {
         stream streams;
         nghttp2_session* handle = nullptr;
         netcore::ssl::buffered_socket socket;
-        router& router;
+        http::server::router& router;
         ext::counter tasks;
 
         auto recv() -> ext::task<>;
