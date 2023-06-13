@@ -8,7 +8,7 @@ namespace http::server::extractor {
         char chars[Size] = {};
 
         constexpr fixed_string(const char (&chars)[Size]) {
-            for (auto i = 0; i < Size; ++i) {
+            for (std::size_t i = 0; i < Size; ++i) {
                 this->chars[i] = chars[i];
             }
         }

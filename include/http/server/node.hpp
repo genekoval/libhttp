@@ -214,7 +214,7 @@ namespace http::server {
                     }
                 }
                 else {
-                    auto i = 0;
+                    std::size_t i = 0;
                     const auto max = std::min(
                         route.size(),
                         current->prefix.size()
