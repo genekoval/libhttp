@@ -40,9 +40,12 @@ namespace http {
         auto get(CURLUPart what, unsigned int flags = 0) -> string;
 
         template <typename... Args>
-        auto path(std::string_view format_string, Args&&... args) -> void {
+        auto path(
+            fmt::format_string<Args...> format_string,
+            Args&&... args
+        ) -> void {
             set(CURLUPART_PATH, fmt::format(
-                fmt::runtime(format_string),
+                format_string,
                 std::forward<Args>(args)...
             ));
         }
