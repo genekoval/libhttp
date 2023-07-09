@@ -325,7 +325,7 @@ namespace http::server {
         co_await send_server_connection_header();
         co_await recv();
         socket.shutdown();
-        co_await tasks;
+        co_await tasks.await();
     }
 
     auto session::handle_request(stream& stream) -> ext::detached_task {
