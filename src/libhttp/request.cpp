@@ -19,21 +19,13 @@ namespace {
 
         return bytes;
     }
-
-    auto write_callback(
-        char* ptr,
-        size_t size,
-        size_t nmemb,
-        void* userdata
-    ) -> size_t {
-        auto& buffer = *reinterpret_cast<std::string*>(userdata);
-        buffer.append(ptr, nmemb);
-        return nmemb;
-    }
 }
 
 namespace http {
-    request::request() : handle(curl_easy_init()) {
+    request::request() :
+        handle(curl_easy_init()),
+        response_stream(handle)
+    {
         if (!handle) throw client_error("failed to create curl easy handle");
 
         set(CURLOPT_CURLU, url_data.data());
@@ -43,8 +35,8 @@ namespace http {
 
     request::request(request&& other) :
         body_data(std::move(other.body_data)),
-        buffer(std::move(other.buffer)),
         handle(std::exchange(other.handle, nullptr)),
+        response_stream(std::move(other.response_stream)),
         header_list(std::exchange(other.header_list, {})),
         url_data(std::exchange(other.url_data, {})),
         current_method(other.current_method)
@@ -56,8 +48,8 @@ namespace http {
 
     auto request::operator=(request&& other) -> request& {
         body_data = std::move(other.body_data);
-        buffer = std::move(other.buffer);
         handle = std::exchange(other.handle, nullptr);
+        response_stream = std::move(other.response_stream);
         header_list = std::exchange(other.header_list, {});
         url_data = std::move(other.url_data);
         current_method = other.current_method;
@@ -68,6 +60,11 @@ namespace http {
     auto request::body(std::string_view data) -> void {
         body_data.data = data;
         set(CURLOPT_POSTFIELDS, nullptr); // Get data from the read callback
+    }
+
+    auto request::collect() -> ext::jtask<std::string> {
+        auto stream = this->stream();
+        co_return co_await stream.collect();
     }
 
     auto request::headers(std::initializer_list<header_type> headers) -> void {
@@ -122,7 +119,7 @@ namespace http {
 
         post_perform(code);
 
-        return response(handle, buffer);
+        return response(handle);
     }
 
     auto request::perform(http::client& client) -> ext::task<response> {
@@ -143,25 +140,55 @@ namespace http {
 
         post_perform(code);
 
-        co_return response(handle, buffer);
+        co_return response(handle);
     }
 
     auto request::pre_perform() -> void {
-        buffer.clear();
-
         set(CURLOPT_READDATA, &body_data);
-        set(CURLOPT_WRITEDATA, &buffer);
+        set(CURLOPT_WRITEDATA, this);
     }
 
     auto request::post_perform(CURLcode code) -> void {
         body_data.written = 0;
+        response_stream.end();
+        response_stream = http::stream(handle);
 
         if (code != CURLE_OK) {
             throw client_error("curl: ({}) {}", code, curl_easy_strerror(code));
         }
     }
 
+    auto request::stream() -> readable_stream {
+        return response_stream;
+    }
+
     auto request::url() -> http::url& {
         return url_data;
+    }
+
+    auto request::write_callback(
+        char* ptr,
+        std::size_t size,
+        std::size_t nmemb,
+        void* userdata
+    ) -> std::size_t {
+        auto& request = *reinterpret_cast<http::request*>(userdata);
+        auto& stream = request.response_stream;
+
+        if (stream.awaiting()) {
+            TIMBER_DEBUG("{} read incoming bytes: {:L}", request, nmemb);
+
+            stream.write(std::span<std::byte> {
+                reinterpret_cast<std::byte*>(ptr),
+                nmemb
+            });
+
+            return nmemb;
+        }
+
+        TIMBER_DEBUG("{} paused");
+
+        stream.paused = true;
+        return CURL_WRITEFUNC_PAUSE;
     }
 }

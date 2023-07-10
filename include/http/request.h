@@ -1,5 +1,6 @@
 #pragma once
 
+#include "stream.hpp"
 #include "url.h"
 
 #include <http/client.hpp>
@@ -50,9 +51,16 @@ namespace http {
 
         friend struct fmt::formatter<request>;
 
+        static auto write_callback(
+            char* ptr,
+            std::size_t size,
+            std::size_t nmemb,
+            void* userdata
+        ) -> std::size_t;
+
         http::body_data body_data;
-        std::string buffer;
         CURL* handle;
+        http::stream response_stream;
         http::header_list header_list;
         http::url url_data;
         CURLoption current_method = CURLOPT_HTTPGET;
@@ -90,6 +98,8 @@ namespace http {
 
         auto body(std::string_view data) -> void;
 
+        auto collect() -> ext::jtask<std::string>;
+
         auto headers(std::initializer_list<header_type> headers) -> void;
 
         auto method(http::method method) -> void;
@@ -103,6 +113,8 @@ namespace http {
         auto perform() -> response;
 
         auto perform(http::client& client) -> ext::task<response>;
+
+        auto stream() -> readable_stream;
 
         auto url() -> http::url&;
     };

@@ -2,6 +2,7 @@
 #include <fmt/chrono.h>
 #include <fmt/os.h>
 #include <gtest/gtest.h>
+#include <http/http>
 #include <netcore/netcore>
 #include <timber/timber>
 
@@ -29,6 +30,7 @@ auto main(int argc, char** argv) -> int {
     timber::thread_name = std::string("main");
     timber::log_handler = &file_logger;
 
+    const auto init = http::init();
     const auto runtime = netcore::runtime();
 
     testing::InitGoogleTest(&argc, argv);
