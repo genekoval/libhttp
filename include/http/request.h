@@ -117,6 +117,8 @@ namespace http {
         auto stream() -> readable_stream;
 
         auto url() -> http::url&;
+
+        auto url(std::string_view url) -> void;
     };
 }
 

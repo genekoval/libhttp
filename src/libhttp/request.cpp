@@ -28,7 +28,6 @@ namespace http {
     {
         if (!handle) throw client_error("failed to create curl easy handle");
 
-        set(CURLOPT_CURLU, url_data.data());
         set(CURLOPT_READFUNCTION, read_callback);
         set(CURLOPT_WRITEFUNCTION, write_callback);
     }
@@ -163,7 +162,12 @@ namespace http {
     }
 
     auto request::url() -> http::url& {
+        set(CURLOPT_CURLU, url_data.data());
         return url_data;
+    }
+
+    auto request::url(std::string_view url) -> void {
+        set(CURLOPT_URL, url.data());
     }
 
     auto request::write_callback(
