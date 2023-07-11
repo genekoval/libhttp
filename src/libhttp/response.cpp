@@ -1,20 +1,22 @@
 #include <http/http.h>
 
 namespace http {
-    constexpr auto success_range_start = 200;
-    constexpr auto success_range_end = 299;
+    response::response(CURL* handle) : handle(handle) {}
 
-    response::response(CURL* handle) {
-        curl_easy_getinfo(handle, CURLINFO_RESPONSE_CODE, &response_code);
+    auto response::content_length() const noexcept -> long {
+        curl_off_t result = 0;
+        curl_easy_getinfo(handle, CURLINFO_CONTENT_LENGTH_DOWNLOAD_T, &result);
+        return result;
     }
 
     auto response::ok() const noexcept -> bool {
-        return
-            response_code >= success_range_start &&
-            response_code <= success_range_end;
+        const auto status = this->status();
+        return status >= 200 && status <= 299;
     }
 
     auto response::status() const noexcept -> long {
-        return response_code;
+        long result = 0;
+        curl_easy_getinfo(handle, CURLINFO_RESPONSE_CODE, &result);
+        return result;
     }
 }

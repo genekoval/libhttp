@@ -9,9 +9,11 @@
 
 namespace http {
     class response {
-        long response_code;
+        CURL* handle;
     public:
         response(CURL* handle);
+
+        auto content_length() const noexcept -> long;
 
         auto ok() const noexcept -> bool;
 
