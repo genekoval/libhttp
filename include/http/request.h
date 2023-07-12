@@ -110,9 +110,11 @@ namespace http {
             std::string_view custom
         ) -> method_guard;
 
-        auto perform() -> response;
+        auto perform() -> http::response;
 
-        auto perform(http::client& client) -> ext::task<response>;
+        auto perform(http::client& client) -> ext::task<http::response>;
+
+        auto response() const noexcept -> http::response;
 
         auto stream() -> readable_stream;
 

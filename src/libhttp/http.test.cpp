@@ -38,6 +38,43 @@ TEST_F(HttpTest, NonblockingRequest) {
     }());
 }
 
+TEST_F(HttpTest, ResponseContentLength) {
+    request.url().path("/");
+
+    auto response = request.response();
+
+    long content_length_during_transfer = 0;
+
+    const auto read_data = [&]() -> ext::jtask<std::string> {
+        auto stream = request.stream();
+        auto chunk = co_await stream.read();
+        auto result = std::string();
+
+        content_length_during_transfer = response.content_length();
+
+        while (!chunk.empty()) {
+            result.append(
+                reinterpret_cast<const char*>(chunk.data()),
+                chunk.size()
+            );
+
+            chunk = co_await stream.read();
+        }
+
+        co_return result;
+    };
+
+    auto task = read_data();
+
+    request.perform();
+
+    const auto body = std::move(task).result();
+    const auto content_length = response.content_length();
+
+    EXPECT_EQ(content_length, content_length_during_transfer);
+    EXPECT_EQ(content_length, body.size());
+}
+
 TEST_F(HttpTest, Send) {
     netcore::run([this]() -> ext::task<> {
         request.url().path("/echo");

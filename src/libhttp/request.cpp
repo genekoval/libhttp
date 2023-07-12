@@ -104,7 +104,7 @@ namespace http {
         return method_guard(this);
     }
 
-    auto request::perform() -> response {
+    auto request::perform() -> http::response {
         TIMBER_TRACE("{} starting blocking transfer", *this);
 
         TIMBER_TIMER(
@@ -118,10 +118,10 @@ namespace http {
 
         post_perform(code);
 
-        return response(handle);
+        return http::response(handle);
     }
 
-    auto request::perform(http::client& client) -> ext::task<response> {
+    auto request::perform(http::client& client) -> ext::task<http::response> {
         TIMBER_TRACE(
             "{} starting nonblocking transfer using {}",
             *this,
@@ -139,7 +139,7 @@ namespace http {
 
         post_perform(code);
 
-        co_return response(handle);
+        co_return http::response(handle);
     }
 
     auto request::pre_perform() -> void {
@@ -155,6 +155,10 @@ namespace http {
         if (code != CURLE_OK) {
             throw client_error("curl: ({}) {}", code, curl_easy_strerror(code));
         }
+    }
+
+    auto request::response() const noexcept -> http::response {
+        return http::response(handle);
     }
 
     auto request::stream() -> readable_stream {
