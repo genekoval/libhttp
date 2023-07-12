@@ -100,6 +100,8 @@ namespace http {
 
         auto collect() -> ext::jtask<std::string>;
 
+        auto follow_redirects(bool enable) -> void;
+
         auto headers(std::initializer_list<header_type> headers) -> void;
 
         auto method(http::method method) -> void;

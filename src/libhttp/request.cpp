@@ -66,6 +66,10 @@ namespace http {
         co_return co_await stream.collect();
     }
 
+    auto request::follow_redirects(bool enable) -> void {
+        set(CURLOPT_FOLLOWLOCATION, enable);
+    }
+
     auto request::headers(std::initializer_list<header_type> headers) -> void {
         if (!header_list.empty()) header_list = http::header_list();
 
