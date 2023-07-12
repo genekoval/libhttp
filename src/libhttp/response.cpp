@@ -1,6 +1,16 @@
 #include <http/http.h>
 
 namespace http {
+    status::status(long code) : code(code) {}
+
+    status::operator long() const noexcept {
+        return code;
+    }
+
+    auto status::ok() const noexcept -> bool {
+        return code >= 200 && code <= 299;
+    }
+
     response::response(CURL* handle) : handle(handle) {}
 
     auto response::content_length() const noexcept -> long {
@@ -10,11 +20,10 @@ namespace http {
     }
 
     auto response::ok() const noexcept -> bool {
-        const auto status = this->status();
-        return status >= 200 && status <= 299;
+        return this->status().ok();
     }
 
-    auto response::status() const noexcept -> long {
+    auto response::status() const noexcept -> http::status {
         long result = 0;
         curl_easy_getinfo(handle, CURLINFO_RESPONSE_CODE, &result);
         return result;
