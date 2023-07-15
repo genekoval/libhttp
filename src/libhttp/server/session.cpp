@@ -385,9 +385,10 @@ namespace http::server {
         }
 
         auto& res = stream.response;
-
         auto headers = std::vector<nghttp2_nv>();
-        headers.push_back(make_nv(":status", fmt::to_string(res.status)));
+
+        const auto status = fmt::to_string(res.status);
+        headers.push_back(make_nv(":status", status));
 
         for (const auto& [name, value] : res.headers) {
             headers.push_back(make_nv(name, value));
