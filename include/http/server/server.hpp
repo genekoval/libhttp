@@ -22,5 +22,7 @@ namespace http::server {
         auto listen(const netcore::address_type& addr) -> void;
     };
 
-    using server = netcore::server<netcore::ssl::server<context>>;
+    using ssl_context = netcore::ssl::server<context>;
+    using server = netcore::server<ssl_context>;
+    using server_list = netcore::server_list<ssl_context>;
 }
