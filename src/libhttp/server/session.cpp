@@ -314,11 +314,15 @@ namespace http::server {
 
         nghttp2_session_server_new(&handle, callbacks, this);
         nghttp2_session_callbacks_del(callbacks);
+
+        TIMBER_TRACE("{} created for {}", *this, this->socket);
     }
 
     session::~session() {
         streams.delete_all();
         nghttp2_session_del(handle);
+
+        TIMBER_TRACE("{} destroyed", *this);
     }
 
     auto session::handle_connection() -> ext::task<> {

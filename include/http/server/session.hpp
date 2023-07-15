@@ -7,6 +7,8 @@
 
 namespace http::server {
     class session {
+        friend struct fmt::formatter<session>;
+
         stream streams;
         nghttp2_session* handle = nullptr;
         netcore::ssl::buffered_socket socket;
@@ -46,3 +48,19 @@ namespace http::server {
         auto make_stream(std::int32_t id) -> stream&;
     };
 }
+
+template <>
+struct fmt::formatter<http::server::session> : formatter<std::string_view> {
+    template <typename FormatContext>
+    auto format(const http::server::session& session, FormatContext& ctx) {
+        auto buffer = memory_buffer();
+        auto out = std::back_inserter(buffer);
+
+        format_to(out, "HTTP Session ({})", ptr(session.handle));
+
+        return formatter<std::string_view>::format(
+            {buffer.data(), buffer.size()},
+            ctx
+        );
+    }
+};
