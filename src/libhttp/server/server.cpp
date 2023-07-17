@@ -18,8 +18,6 @@ namespace http::server {
         router(&router)
     {}
 
-    auto context::close() -> void {}
-
     auto context::connection(netcore::ssl::socket&& client) -> ext::task<> {
         const auto protocol = co_await client.accept();
 
@@ -33,8 +31,13 @@ namespace http::server {
             *router
         );
 
+        sessions.link(session);
+
         co_await session.handle_connection();
     }
 
-    auto context::listen(const netcore::address_type& addr) -> void {}
+    auto context::shutdown() -> void {
+        TIMBER_DEBUG("HTTP server shutdown requested");
+        sessions.close();
+    }
 }

@@ -9,11 +9,17 @@ namespace http::server {
     class session {
         friend struct fmt::formatter<session>;
 
+        session* next = this;
+        session* prev = this;
+
         stream streams;
         nghttp2_session* handle = nullptr;
         netcore::ssl::buffered_socket socket;
-        http::server::router& router;
+        http::server::router* router = nullptr;
         ext::counter tasks;
+        ext::continuation<> closed;
+
+        auto await_close() -> ext::task<>;
 
         auto recv() -> ext::task<>;
 
@@ -22,8 +28,12 @@ namespace http::server {
         auto send() -> ext::task<>;
 
         auto send_server_connection_header() -> ext::task<>;
+
+        auto unlink() noexcept -> void;
     public:
         ext::continuation<>* pause = nullptr;
+
+        session() = default;
 
         session(
             netcore::ssl::socket&& socket,
@@ -41,9 +51,13 @@ namespace http::server {
 
         auto operator=(session&&) -> session& = delete;
 
+        auto close() noexcept -> void;
+
         auto handle_connection() -> ext::task<>;
 
         auto handle_request(stream& stream) -> ext::detached_task;
+
+        auto link(session& other) noexcept -> void;
 
         auto make_stream(std::int32_t id) -> stream&;
     };

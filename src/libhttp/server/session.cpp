@@ -277,7 +277,7 @@ namespace http::server {
         server::router& router
     ) :
         socket(std::forward<netcore::ssl::socket>(socket), buffer_size),
-        router(router)
+        router(&router)
     {
         nghttp2_session_callbacks* callbacks = nullptr;
         nghttp2_session_callbacks_new(&callbacks);
@@ -319,10 +319,31 @@ namespace http::server {
     }
 
     session::~session() {
+        unlink();
         streams.delete_all();
         nghttp2_session_del(handle);
 
-        TIMBER_TRACE("{} destroyed", *this);
+        if (handle) {
+            TIMBER_TRACE("{} destroyed", *this);
+        }
+    }
+
+    auto session::await_close() -> ext::task<> {
+        co_await closed;
+        TIMBER_TRACE("{} close requested", *this);
+    }
+
+    auto session::close() noexcept -> void {
+        auto* current = this;
+
+        do {
+            // `current` may unlink itself from the list.
+            auto* const next = current->next;
+
+            current->closed.resume();
+
+            current = next;
+        } while (current != this);
     }
 
     auto session::handle_connection() -> ext::task<> {
@@ -339,7 +360,7 @@ namespace http::server {
         TIMBER_DEBUG("{}", stream);
 
         try {
-            if (co_await router.route(stream)) co_await respond(stream);
+            if (co_await router->route(stream)) co_await respond(stream);
         }
         catch (const std::exception& ex) {
             TIMBER_ERROR("Session handler failed: {}", ex.what());
@@ -350,6 +371,14 @@ namespace http::server {
 
         stream.active = false;
         if (!stream.open) delete &stream;
+    }
+
+    auto session::link(session& other) noexcept -> void {
+        other.next = this;
+        other.prev = prev;
+
+        prev->next = &other;
+        prev = &other;
     }
 
     auto session::make_stream(std::int32_t id) -> stream& {
@@ -365,7 +394,20 @@ namespace http::server {
 
         do {
             if (pause) pause = nullptr;
-            else bytes = co_await socket.read();
+            else {
+                auto result = co_await ext::race(
+                    await_close(),
+                    socket.read()
+                );
+
+                if (result.index() == 0) {
+                    TIMBER_TRACE("{} closing", *this);
+                    co_await std::get<0>(std::move(result));
+                    co_return;
+                }
+
+                bytes = co_await std::get<1>(std::move(result));
+            }
 
             const auto rv = nghttp2_session_mem_recv(
                 handle,
@@ -447,5 +489,13 @@ namespace http::server {
 
         if (rv != 0) throw std::runtime_error(nghttp2_strerror(rv));
         co_await send();
+    }
+
+    auto session::unlink() noexcept -> void {
+        next->prev = prev;
+        prev->next = next;
+
+        next = this;
+        prev = this;
     }
 }
