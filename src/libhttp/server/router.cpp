@@ -1,3 +1,4 @@
+#include <http/server/error.hpp>
 #include <http/server/response/string.hpp>
 #include <http/server/router.hpp>
 
@@ -39,6 +40,10 @@ namespace http::server {
             );
 
             stream.response.status = error.code();
+            stream.response.send(error.what());
+        }
+        catch (const error& error) {
+            stream.response.status = error.http_code();
             stream.response.send(error.what());
         }
         catch (const std::exception& ex) {

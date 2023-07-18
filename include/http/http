@@ -2,6 +2,7 @@
 #include "init.h"
 #include "json.hpp"
 #include "request.h"
+#include "server/error.hpp"
 #include "server/server.hpp"
 #include "server/ssl.hpp"
 #include "server/response/response.hpp"
