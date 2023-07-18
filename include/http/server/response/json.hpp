@@ -15,4 +15,11 @@ namespace http::server {
             res.data = std::move(string);
         }
     };
+
+    template <std::convertible_to<json> T>
+    struct response_type<T> {
+        static auto send(response& res, const T& t) -> void {
+            response_type<json>::send(res, t);
+        }
+    };
 }
