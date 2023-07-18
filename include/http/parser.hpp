@@ -6,6 +6,7 @@
 #include <concepts>
 #include <filesystem>
 #include <optional>
+#include <uuid++/uuid++>
 
 namespace http {
     struct parser_error : std::runtime_error {
@@ -126,6 +127,13 @@ namespace http {
     struct parser<std::filesystem::path> {
         static auto parse(std::string_view string) -> std::filesystem::path {
             return string;
+        }
+    };
+
+    template <>
+    struct parser<UUID::uuid> {
+        static auto parse(std::string_view string) -> UUID::uuid {
+            return UUID::uuid(string);
         }
     };
 }
