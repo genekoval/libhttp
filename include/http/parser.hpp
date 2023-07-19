@@ -4,9 +4,11 @@
 
 #include <chrono>
 #include <concepts>
+#include <ext/string.h>
 #include <filesystem>
 #include <optional>
 #include <uuid++/uuid++>
+#include <vector>
 
 namespace http {
     struct parser_error : std::runtime_error {
@@ -134,6 +136,19 @@ namespace http {
     struct parser<UUID::uuid> {
         static auto parse(std::string_view string) -> UUID::uuid {
             return UUID::uuid(string);
+        }
+    };
+
+    template <std::constructible_from<std::string_view> T>
+    struct parser<std::vector<T>> {
+        static auto parse(std::string_view string) -> std::vector<T> {
+            auto result = std::vector<T>();
+
+            for (const auto& token : ext::string_range(string, ",")) {
+                result.emplace_back(ext::trim(token));
+            }
+
+            return result;
         }
     };
 }
