@@ -12,5 +12,17 @@ namespace http::server::extractor::detail {
             name(name),
             value(std::forward<T>(value))
         {}
+
+        operator const T&() const noexcept {
+            return value;
+        }
+
+        auto operator*() const noexcept -> const T& {
+            return value;
+        }
+
+        auto operator->() const noexcept -> const T* {
+            return &value;
+        }
     };
 }
