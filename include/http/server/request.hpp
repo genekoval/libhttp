@@ -36,8 +36,14 @@ namespace http::server {
             const auto result = map.find(key);
 
             if (result != map.end()) {
+                const auto value = result->second;
+
+                if constexpr (is_optional_v<T>) {
+                    if (value.empty()) return T();
+                }
+
                 try {
-                    return parser<T>::parse(result->second);
+                    return parser<T>::parse(value);
                 }
                 catch (const std::exception& ex) {
                     throw error_code(
