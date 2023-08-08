@@ -42,13 +42,19 @@ namespace http::server {
         }
 
         template <typename... Args>
-        auto use(stream& stream, void (*fn)(Args...)) -> ext::task<> {
+        auto use(
+            stream& stream,
+            std::function<void(Args...)>& fn
+        ) -> ext::task<> {
             std::apply(fn, co_await extract<Args...>(stream.request));
             co_return;
         }
 
         template <response_data R, typename... Args>
-        auto use(stream& stream, R (*fn)(Args...)) -> ext::task<> {
+        auto use(
+            stream& stream,
+            std::function<R(Args...)>& fn
+        ) -> ext::task<> {
             stream.response.send(std::apply(
                 fn,
                 co_await extract<Args...>(stream.request)
@@ -57,103 +63,42 @@ namespace http::server {
         }
 
         template <typename... Args>
-        auto use(stream& stream, ext::task<> (*fn)(Args...)) -> ext::task<> {
+        auto use(
+            stream& stream,
+            std::function<ext::task<>(Args...)>& fn
+        ) -> ext::task<> {
             co_await std::apply(fn, co_await extract<Args...>(stream.request));
         }
 
         template <response_data R, typename... Args>
-        auto use(stream& stream, ext::task<R> (*fn)(Args...)) -> ext::task<> {
+        auto use(
+            stream& stream,
+            std::function<ext::task<R>(Args...)>& fn
+        ) -> ext::task<> {
             stream.response.send(co_await std::apply(
                 fn,
                 co_await extract<Args...>(stream.request))
             );
         }
 
-        template <typename T, typename U, typename... Args>
-        auto use(
-            stream& stream,
-            std::tuple<std::reference_wrapper<T>> t,
-            void (U::* fn)(Args...)
-        ) -> ext::task<> {
-            std::apply(fn, std::tuple_cat(
-                t,
-                co_await extract<Args...>(stream.request)
-            ));
-            co_return;
-        }
+        template <typename R, typename... Args>
+        class handler : public server::handler {
+            using function = std::function<R(Args...)>;
 
-        template <typename T, typename U, response_data R, typename... Args>
-        auto use(
-            stream& stream,
-            std::tuple<std::reference_wrapper<T>> t,
-            R (U::* fn)(Args...)
-        ) -> ext::task<> {
-            stream.response.send(std::apply(fn, std::tuple_cat(
-                t,
-                co_await extract<Args...>(stream.request)
-            )));
-            co_return;
-        }
-
-        template <typename T, typename U, typename... Args>
-        auto use(
-            stream& stream,
-            std::tuple<std::reference_wrapper<T>> t,
-            ext::task<> (U::* fn)(Args...)
-        ) -> ext::task<> {
-            co_await std::apply(fn, std::tuple_cat(
-                t,
-                co_await extract<Args...>(stream.request)
-            ));
-        }
-
-        template <typename T, typename U, response_data R, typename... Args>
-        auto use(
-            stream& stream,
-            std::tuple<std::reference_wrapper<T>> t,
-            ext::task<R> (U::* fn)(Args...)
-        ) -> ext::task<> {
-            stream.response.send(co_await std::apply(fn, std::tuple_cat(
-                t,
-                co_await extract<Args...>(stream.request)
-            )));
-        }
-
-        template <typename F>
-        class handler_fn : public handler {
-            F f;
+            function fn;
         public:
-            handler_fn(F&& f) : f(std::forward<F>(f)) {}
+            handler(function&& fn) : fn(std::forward<function>(fn)) {}
 
             auto handle(stream& stream) -> ext::task<> override {
-                co_await use(stream, f);
+                co_await use(stream, fn);
             }
-        };
-
-        template <typename T, typename F>
-        class handler_member : public handler {
-            std::tuple<std::reference_wrapper<T>> t;
-            F f;
-        public:
-            handler_member(T& t, F f) : t(t), f(f) {}
-
-            auto handle(stream& stream) -> ext::task<> override {
-                co_await use(stream, t, f);
-            };
         };
     }
 
     template <typename F>
     auto make_handler(F&& f) -> std::unique_ptr<handler> {
         return std::unique_ptr<handler>(
-            new detail::handler_fn<F>(std::forward<F>(f))
-        );
-    }
-
-    template <typename T, typename F>
-    auto make_handler(T& t, F f) -> std::unique_ptr<handler> {
-        return std::unique_ptr<handler>(
-            new detail::handler_member<T, F>(t, f)
+            new detail::handler(std::function(std::forward<F>(f)))
         );
     }
 }

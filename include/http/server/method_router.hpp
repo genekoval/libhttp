@@ -5,12 +5,7 @@
 #define HTTP_METHOD(name, str) \
     template <typename F> \
     auto name(F&& f) -> method_router& { \
-        return use(str, std::forward<F>(f)); \
-    } \
-\
-    template <typename T, typename F> \
-    auto name(T& t, F&& f) -> method_router& { \
-        return use(str, t, std::forward<F>(f)); \
+        return this->use(str, std::forward<F>(f)); \
     }
 
 #define HTTP_METHOD_FN(name) \
@@ -18,13 +13,6 @@
     auto name(F&& f) -> method_router { \
         auto router = method_router(); \
         router.name(std::forward<F>(f)); \
-        return router; \
-    } \
-\
-    template <typename T, typename F> \
-    auto name(T& t, F&& f) -> method_router { \
-        auto router = method_router(); \
-        router.name(t, std::forward<F>(f)); \
         return router; \
     }
 
@@ -56,14 +44,6 @@ namespace http::server {
             cache_invalid = true;
             return *this;
         }
-
-        template <typename T, typename F>
-        auto use(std::string_view method, T& t, F&& f) -> method_router& {
-            methods.emplace(method, make_handler(t, std::forward<F>(f)));
-            cache_invalid = true;
-            return *this;
-        }
-
 
         HTTP_METHOD(del,  "DELETE")
         HTTP_METHOD(get,  "GET")
