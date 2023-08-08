@@ -36,7 +36,7 @@ namespace http::server {
             const auto result = map.find(key);
 
             if (result != map.end()) {
-                const auto value = result->second;
+                const auto& value = result->second;
 
                 if constexpr (is_optional_v<T>) {
                     if (value.empty()) return T();
