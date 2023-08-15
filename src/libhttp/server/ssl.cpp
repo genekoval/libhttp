@@ -43,7 +43,6 @@ namespace http::server {
     auto ssl() -> netcore::ssl::context {
         auto ssl = netcore::ssl::context::server();
 
-        ssl.set_options(SSL_OP_IGNORE_UNEXPECTED_EOF);
         ssl.set_next_protos_advertised_callback(next_protos_advertised);
         ssl.set_alpn_select_callback(alpn_select);
 
