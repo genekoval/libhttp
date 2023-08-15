@@ -348,8 +348,15 @@ namespace http::server {
 
     auto session::handle_connection() -> ext::task<> {
         co_await send_server_connection_header();
-        co_await recv();
-        socket.shutdown();
+
+        try {
+            co_await recv();
+            socket.shutdown();
+        }
+        catch (const netcore::eof&) {
+            TIMBER_DEBUG("{} received unexpected EOF", *this);
+        }
+
         co_await tasks.await();
     }
 
