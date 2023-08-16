@@ -23,14 +23,7 @@ namespace http::server::extractor {
     }
 
     auto data<json>::read(request& request) -> ext::task<json> {
-        constexpr auto expected = "application/json";
-
-        const auto type = request.header<std::string_view>("content-type");
-
-        if (type != expected) {
-            throw error_code(400, "Expect content of type '{}'", expected);
-        }
-
+        request.expect_content_type(media::json);
         co_return json::parse(co_await data<std::string>::read(request));
     }
 }

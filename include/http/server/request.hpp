@@ -1,5 +1,6 @@
 #pragma once
 
+#include <http/media_type.hpp>
 #include <http/parser.hpp>
 
 #include <ext/coroutine>
@@ -80,6 +81,10 @@ namespace http::server {
         bool eof = false;
         bool discard = false;
         ext::continuation<> continuation;
+
+        auto content_type() const -> media_type;
+
+        auto expect_content_type(const media_type& expected) const -> void;
 
         template <typename T>
         auto header(std::string_view name) const -> T {

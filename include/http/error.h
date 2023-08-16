@@ -57,4 +57,10 @@ namespace http {
             return "Stream aborted";
         }
     };
+
+    struct invalid_media_type : std::invalid_argument {
+        invalid_media_type(std::string_view type) :
+            invalid_argument(type.data())
+        {}
+    };
 }
