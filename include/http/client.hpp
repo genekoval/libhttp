@@ -11,13 +11,18 @@ namespace http {
         friend struct fmt::formatter<client>;
 
         class socket {
-            netcore::system_event& event;
+            curl_socket_t sockfd;
+            netcore::system_event event;
         public:
-            std::optional<int> updates;
+            socket(curl_socket_t sockfd);
 
-            socket(netcore::system_event& event);
+            [[nodiscard]]
+            auto fd() const noexcept -> curl_socket_t;
 
-            auto notify() -> void;
+            [[nodiscard]]
+            auto update(int what) -> bool;
+
+            auto wait() -> ext::task<int>;
         };
 
         static auto socket_callback(
@@ -48,13 +53,15 @@ namespace http {
 
         auto add(CURL* handle, netcore::event<CURLcode>& event) -> void;
 
-        auto assign(curl_socket_t fd, socket& sock) -> void;
+        [[nodiscard]]
+        auto assign(socket& sock) -> bool;
 
         auto cleanup() const noexcept -> void;
 
         auto manage_socket(
-            curl_socket_t sockfd,
-            uint32_t events
+            socket socket,
+            int what,
+            bool& success
         ) -> ext::detached_task;
 
         auto manage_timer(

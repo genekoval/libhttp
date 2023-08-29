@@ -8,25 +8,67 @@
 
 using std::chrono::milliseconds;
 
-namespace {
-    auto translate(int what) -> uint32_t {
-        uint32_t events = 0;
+namespace http {
+    client::socket::socket(curl_socket_t sockfd) :
+        sockfd(sockfd),
+        event(sockfd)
+    {}
+
+    auto client::socket::fd() const noexcept -> curl_socket_t {
+        return sockfd;
+    }
+
+    auto client::socket::update(int what) -> bool {
+        std::uint32_t events = 0;
 
         switch (what) {
-            case CURL_POLL_IN: events = EPOLLIN; break;
-            case CURL_POLL_OUT: events = EPOLLOUT; break;
-            case CURL_POLL_INOUT: events = EPOLLIN | EPOLLOUT; break;
+            case CURL_POLL_IN:
+                TIMBER_TRACE("socket ({}) wants to read", sockfd);
+                events = EPOLLIN;
+                break;
+            case CURL_POLL_OUT:
+                TIMBER_TRACE("socket ({}) wants to write", sockfd);
+                events = EPOLLOUT;
+                break;
+            case CURL_POLL_INOUT:
+                TIMBER_TRACE("socket ({}) wants to read and write", sockfd);
+                events = EPOLLIN | EPOLLOUT;
+                break;
+            case CURL_POLL_REMOVE:
+                TIMBER_TRACE("socket ({}) removal requested", sockfd);
+                event.cancel();
+                return true;
+            default:
+                TIMBER_ERROR("Unexpected curl socket status ({})", what);
+                return false;
         }
 
-        return events;
+        try {
+            event.set(events);
+            return true;
+        }
+        catch (const std::exception& ex) {
+            TIMBER_ERROR("Failed to update curl socket events: {}", ex.what());
+        }
+
+        return false;
     }
-}
 
-namespace http {
-    client::socket::socket(netcore::system_event& event) : event(event) {}
+    auto client::socket::wait() -> ext::task<int> {
+        const auto events = co_await event.wait();
+        int result = 0;
 
-    auto client::socket::notify() -> void {
-        event.notify();
+        if (events & EPOLLIN) {
+            result |= CURL_CSELECT_IN;
+            TIMBER_TRACE("socket ({}) ready to read", sockfd);
+        }
+
+        if (events & EPOLLOUT) {
+            result |= CURL_CSELECT_OUT;
+            TIMBER_TRACE("socket ({}) ready to write", sockfd);
+        }
+
+        co_return result;
     }
 
     auto client::socket_callback(
@@ -38,25 +80,25 @@ namespace http {
     ) -> int {
         auto& client = *static_cast<http::client*>(userp);
 
-        TIMBER_TRACE("{} socket callback ({})", client, sockfd);
+        TIMBER_TRACE("{} socket ({}) callback", client, sockfd);
 
-        if (!socketp) {
+        if (socketp) {
+            auto& socket = *static_cast<http::client::socket*>(socketp);
+            TIMBER_TRACE("socket ({}) update requested", sockfd);
+            if (!socket.update(what)) return -1;
+        }
+        else {
+            auto success = false;
+            client.manage_socket(sockfd, what, success);
+            if (!success) return -1;
+
             TIMBER_TRACE(
                 "{} socket ({}) created for request ({})",
                 client,
                 sockfd,
                 fmt::ptr(easy)
             );
-            client.manage_socket(sockfd, translate(what));
-            return 0;
         }
-
-        TIMBER_TRACE("socket ({}) update requested", sockfd);
-
-        auto& sock = *static_cast<socket*>(socketp);
-
-        sock.updates = what;
-        if (what == CURL_POLL_REMOVE) sock.notify();
 
         return 0;
     }
@@ -66,12 +108,14 @@ namespace http {
         long timeout_ms,
         void* userp
     ) -> int {
+        const auto timeout = milliseconds(timeout_ms);
         auto& client = *static_cast<http::client*>(userp);
 
-        TIMBER_TRACE("{} timer callback ({:L}ms)", client, timeout_ms);
+        TIMBER_TRACE("{} timer callback ({:L})", client, timeout);
 
         if (timeout_ms == -1) client.timer.disarm();
-        else client.manage_timer(milliseconds(timeout_ms));
+        else if (client.timer.waiting()) client.timer.set(timeout);
+        else client.manage_timer(timeout);
 
         return 0;
     }
@@ -142,13 +186,19 @@ namespace http {
         handles.insert({handle, event});
     }
 
-    auto client::assign(curl_socket_t fd, socket& sock) -> void {
-        const auto code = curl_multi_assign(handle, fd, &sock);
+    auto client::assign(socket& sock) -> bool {
+        const auto code = curl_multi_assign(handle, sock.fd(), &sock);
 
-        if (code != CURLM_OK) throw client_error(
-            "failed to assign socket data pointer to fd: {}",
-            curl_multi_strerror(code)
-        );
+        if (code != CURLM_OK) {
+            TIMBER_ERROR(
+                "Failed to assign socket data pointer to fd: {}",
+                curl_multi_strerror(code)
+            );
+
+            return false;
+        }
+
+        return true;
     }
 
     auto client::cleanup() const noexcept -> void {
@@ -165,50 +215,21 @@ namespace http {
     }
 
     auto client::manage_socket(
-        curl_socket_t sockfd,
-        uint32_t events
+        socket socket,
+        int what,
+        bool& success
     ) -> ext::detached_task {
-        auto event = netcore::system_event(sockfd, events);
-        auto sock = socket(event);
-        assign(sockfd, sock);
+        if (!(success = assign(socket) && socket.update(what))) co_return;
 
         while (true) {
-            if (sock.updates) {
-                const auto updates = *sock.updates;
+            const auto events = co_await socket.wait();
 
-                if (updates == CURL_POLL_REMOVE) {
-                    TIMBER_TRACE("socket ({}) task complete", sockfd);
-                    co_return;
-                }
-
-                events = translate(updates);
-
-                sock.updates.reset();
-            }
-
-            try {
-                co_await event.wait(events, nullptr);
-            }
-            catch (const netcore::task_canceled&) {
+            if (events == 0) {
+                TIMBER_TRACE("socket ({}) task complete", socket.fd());
                 co_return;
             }
 
-            if (sock.updates) continue;
-
-            const auto latest = event.latest_events();
-            int ev = 0;
-
-            if (latest & EPOLLIN) {
-                ev |= CURL_CSELECT_IN;
-                TIMBER_TRACE("socket ({}) received event: IN", sockfd);
-            }
-            if (latest & EPOLLOUT) {
-                ev |= CURL_CSELECT_OUT;
-                TIMBER_TRACE("socket ({}) received event: OUT", sockfd);
-            }
-
-            TIMBER_TRACE("socket ({}) performing action", sockfd);
-            action(sockfd, ev);
+            action(socket.fd(), events);
         }
     }
 
@@ -216,14 +237,7 @@ namespace http {
         timer.set(timeout);
 
         if (timeout == milliseconds::zero()) co_await netcore::yield();
-        else {
-            try {
-                co_await timer.wait();
-            }
-            catch (const netcore::task_canceled&) {
-                co_return;
-            }
-        }
+        else if (!co_await timer.wait()) co_return;
 
         action(CURL_SOCKET_TIMEOUT);
     }
