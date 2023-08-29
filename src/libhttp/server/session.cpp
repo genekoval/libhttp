@@ -329,8 +329,19 @@ namespace http::server {
     }
 
     auto session::await_close() -> ext::task<> {
-        co_await closed;
-        TIMBER_TRACE("{} close requested", *this);
+        auto exception = std::exception_ptr();
+
+        try {
+            co_await closed;
+            TIMBER_TRACE("{} close requested", *this);
+            co_return;
+        }
+        catch (...) {
+            exception = std::current_exception();
+        }
+
+        co_await netcore::yield();
+        std::rethrow_exception(exception);
     }
 
     auto session::close() noexcept -> void {
@@ -347,7 +358,7 @@ namespace http::server {
     }
 
     auto session::handle_connection() -> ext::task<> {
-        co_await send_server_connection_header();
+        send_server_connection_header();
 
         try {
             co_await recv();
@@ -427,7 +438,7 @@ namespace http::server {
             // Always try calling nghttp2_session_mem_send() after calling
             // nghttp2_session_mem_recv() to ensure that we don't miss
             // sending any pending WINDOW_UPDATE frames.
-            else co_await send();
+            else if (send) send();
         } while (!bytes.empty());
     }
 
@@ -464,22 +475,10 @@ namespace http::server {
         );
 
         if (rv != 0) throw std::runtime_error(nghttp2_strerror(rv));
-
-        co_await send();
+        if (send) send();
     }
 
-    auto session::send() -> ext::task<> {
-        const std::uint8_t* src = nullptr;
-
-        while (const auto length = nghttp2_session_mem_send(handle, &src)) {
-            if (length < 0) throw std::runtime_error(nghttp2_strerror(length));
-            co_await socket.write(src, length);
-        }
-
-        co_await socket.flush();
-    }
-
-    auto session::send_server_connection_header() -> ext::task<> {
+    auto session::send_server_connection_header() -> void {
         auto settings = std::array {
             nghttp2_settings_entry {
                 NGHTTP2_SETTINGS_MAX_CONCURRENT_STREAMS,
@@ -495,7 +494,29 @@ namespace http::server {
         );
 
         if (rv != 0) throw std::runtime_error(nghttp2_strerror(rv));
-        co_await send();
+
+        send_task = start_send();
+    }
+
+    auto session::start_send() -> ext::jtask<> {
+        while (true) {
+            const std::uint8_t* src = nullptr;
+
+            while (const auto length = nghttp2_session_mem_send(handle, &src)) {
+                if (length < 0) {
+                    closed.resume(std::make_exception_ptr(std::runtime_error(
+                        nghttp2_strerror(length)
+                    )));
+
+                    co_return;
+                }
+
+                co_await socket.write(src, length);
+            }
+
+            co_await socket.flush();
+            co_await send;
+        }
     }
 
     auto session::unlink() noexcept -> void {

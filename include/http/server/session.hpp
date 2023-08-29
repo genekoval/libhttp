@@ -18,6 +18,8 @@ namespace http::server {
         http::server::router* router = nullptr;
         ext::counter tasks;
         ext::continuation<> closed;
+        ext::continuation<> send;
+        ext::jtask<> send_task;
 
         auto await_close() -> ext::task<>;
 
@@ -25,9 +27,9 @@ namespace http::server {
 
         auto respond(stream& stream) -> ext::task<>;
 
-        auto send() -> ext::task<>;
+        auto send_server_connection_header() -> void;
 
-        auto send_server_connection_header() -> ext::task<>;
+        auto start_send() -> ext::jtask<>;
 
         auto unlink() noexcept -> void;
     public:
