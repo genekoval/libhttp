@@ -5,15 +5,11 @@
 
 namespace http {
     url::url() : handle(curl_url()) {
-        if (!handle) {
-            throw http::client_error("failed to allocate URL handle");
-        }
+        if (!handle) throw client_error("Failed to allocate URL handle");
     }
 
     url::url(const url& other) : handle(curl_url_dup(other.handle)) {
-        if (!handle) {
-            throw http::client_error("failed to duplicate URL handle");
-        }
+        if (!handle) throw client_error("Failed to duplicate URL handle");
     }
 
     url::url(url&& other) : handle(std::exchange(other.handle, nullptr)) {}
@@ -23,12 +19,22 @@ namespace http {
     }
 
     auto url::operator=(const url& other) -> url& {
-        handle = curl_url_dup(other.handle);
+        if (handle != other.handle) {
+            curl_url_cleanup(handle);
+
+            handle = curl_url_dup(other.handle);
+            if (!handle) throw client_error("Failed to duplicate URL handle");
+        }
+
         return *this;
     }
 
     auto url::operator=(url&& other) -> url& {
-        handle = std::exchange(other.handle, nullptr);
+        if (handle != other.handle) {
+            curl_url_cleanup(handle);
+            handle = std::exchange(other.handle, nullptr);
+        }
+
         return *this;
     }
 
