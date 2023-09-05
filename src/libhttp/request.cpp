@@ -18,8 +18,8 @@ namespace {
     template <typename... Ts>
     overloaded(Ts...) -> overloaded<Ts...>;
 
-    auto open(const fs::path& path, CURL* handle) -> file {
-        if (auto* stream = std::fopen(path.c_str(), "r")) {
+    auto open(const fs::path& path, CURL* handle, const char* mode) -> file {
+        if (auto* stream = std::fopen(path.c_str(), mode)) {
             TIMBER_DEBUG(
                 R"(request ({}) opened file "{}")",
                 fmt::ptr(handle),
@@ -124,7 +124,7 @@ namespace http {
     }
 
     auto request::download(const fs::path& location) -> void {
-        response_data = open(location, handle);
+        response_data = open(location, handle, "w");
     }
 
     auto request::follow_redirects(bool enable) -> void {
@@ -252,7 +252,7 @@ namespace http {
     }
 
     auto request::upload(const fs::path& file) -> void {
-        body = open(file, handle);
+        body = open(file, handle, "r");
     }
 
     auto request::write_stream(
