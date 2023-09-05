@@ -27,6 +27,10 @@ namespace http {
         std::string subtype;
         std::optional<name_value> parameter;
 
+        constexpr media_type(const char* str) :
+            media_type(std::string_view(str))
+        {}
+
         constexpr media_type(std::string_view type) {
             auto begin = type.begin();
             auto it = begin;
@@ -69,9 +73,10 @@ namespace http {
     };
 
     namespace media {
-        constexpr auto json = media_type("application/json");
-        constexpr auto plain_text = media_type("text/plain");
-        constexpr auto utf8_text = media_type("text/plain; charset=UTF-8");
+        constexpr media_type json = "application/json";
+        constexpr media_type octet_stream = "application/octet-stream";
+        constexpr media_type plain_text = "text/plain";
+        constexpr media_type utf8_text = "text/plain; charset=UTF-8";
     }
 }
 

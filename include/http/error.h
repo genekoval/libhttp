@@ -22,7 +22,7 @@ namespace http {
             return fmt::vformat(format, args);
         }
     public:
-        error(const std::string& what) : runtime_error(what) {}
+        error(std::string_view what) : runtime_error(what.data()) {}
 
         template <typename... T>
         error(fmt::format_string<T...> format, T&&... args) :
@@ -36,7 +36,7 @@ namespace http {
     class error_code : public error {
         int errorc;
     public:
-        error_code(int code, const std::string& what) :
+        error_code(int code, std::string_view what) :
             error(what),
             errorc(code)
         {}

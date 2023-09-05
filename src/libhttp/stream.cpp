@@ -1,9 +1,35 @@
 #include <http/stream.hpp>
 
 #include <cassert>
+#include <cstring>
+#include <fstream>
 
 namespace http {
     stream::stream(CURL* handle) : handle(handle) {}
+
+    stream::stream(stream&& other) :
+        handle(std::exchange(other.handle, nullptr)),
+        coroutine(std::exchange(other.coroutine, nullptr)),
+        data(std::exchange(other.data, {})),
+        eof(std::exchange(other.eof, false)),
+        paused(std::exchange(other.paused, false))
+    {}
+
+    stream::~stream() {
+        eof = true;
+        data = {};
+
+        if (coroutine) coroutine.resume();
+    }
+
+    auto stream::operator=(stream&& other) -> stream& {
+        if (std::addressof(other) != this) {
+            std::destroy_at(this);
+            std::construct_at(this, std::move(other));
+        }
+
+        return *this;
+    }
 
     auto stream::awaiting() const noexcept -> bool {
         return coroutine != nullptr;
@@ -29,10 +55,26 @@ namespace http {
         return data;
     }
 
+    auto stream::close() -> void {
+        aborted = true;
+        coroutine = nullptr;
+
+        if (paused) {
+            paused = false;
+            curl_easy_pause(handle, CURLPAUSE_CONT);
+        }
+    }
+
     auto stream::end() noexcept -> void {
         eof = true;
         data = std::span<std::byte>();
         if (coroutine) coroutine.resume();
+    }
+
+    auto stream::expected_size() const -> long {
+        curl_off_t result = 0;
+        curl_easy_getinfo(handle, CURLINFO_CONTENT_LENGTH_DOWNLOAD_T, &result);
+        return result;
     }
 
     auto stream::write(std::span<std::byte> data) -> void {
@@ -46,6 +88,10 @@ namespace http {
         source(std::exchange(other.source, nullptr))
     {}
 
+    readable_stream::~readable_stream() {
+        if (source) source->close();
+    }
+
     auto readable_stream::operator=(
         readable_stream&& other
     ) -> readable_stream& {
@@ -53,20 +99,8 @@ namespace http {
         return *this;
     }
 
-    auto readable_stream::collect() -> ext::task<std::string> {
-        auto result = std::string();
-        auto chunk = std::span<std::byte>();
-
-        do {
-            chunk = co_await read();
-
-            result.append(
-                reinterpret_cast<const char*>(chunk.data()),
-                chunk.size()
-            );
-        } while (!chunk.empty());
-
-        co_return result;
+    auto readable_stream::expected_size() const noexcept -> long {
+        return source->expected_size();
     }
 
     auto readable_stream::read() -> ext::task<std::span<std::byte>> {

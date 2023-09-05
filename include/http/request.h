@@ -3,67 +3,51 @@
 #include "stream.hpp"
 #include "url.h"
 
-#include <http/client.hpp>
 #include <http/error.h>
 #include <http/response.h>
+#include <http/session.hpp>
 #include <timber/timber>
 
 namespace http {
-    enum class method {
-        GET,
-        HEAD,
-        POST,
-        PUT
+    struct file_deleter {
+#ifndef NDEBUG
+        CURL* handle;
+        std::filesystem::path path;
+#endif
+        auto operator()(FILE* file) const noexcept -> void;
     };
 
-    struct body_data {
-        std::string_view data;
-        std::size_t written = 0;
-    };
+    using file_stream = std::unique_ptr<FILE, file_deleter>;
 
-    class header_list {
-        curl_slist* list = nullptr;
-
-        auto add(const char* item) -> void;
-    public:
-        ~header_list();
-
-        auto add(std::string_view key, std::string_view value) -> void;
-
-        auto data() -> curl_slist*;
-
-        auto empty() const -> bool;
-    };
-
-    class request;
-
-    class method_guard final {
-        http::request* request;
-    public:
-        method_guard(http::request* request);
-
-        ~method_guard();
+    struct file {
+        file_stream stream;
+        std::size_t size;
     };
 
     class request {
-        friend class client;
+        friend class session;
         friend class method_guard;
 
         friend struct fmt::formatter<request>;
 
-        static auto write_callback(
+        static auto write_stream(
             char* ptr,
             std::size_t size,
             std::size_t nmemb,
             void* userdata
-        ) -> std::size_t;
+        ) noexcept -> std::size_t;
 
-        http::body_data body_data;
+        static auto write_string(
+            char* ptr,
+            std::size_t size,
+            std::size_t nmemb,
+            void* userdata
+        ) noexcept -> std::size_t;
+
         CURL* handle;
-        http::stream response_stream;
-        http::header_list header_list;
-        http::url url_data;
-        CURLoption current_method = CURLOPT_HTTPGET;
+        curl_slist* headers = nullptr;
+        std::variant<std::monostate, std::string_view, file> body;
+        std::variant<std::string, file, FILE*, http::stream> response_data;
 
         template <typename T>
         auto set(CURLoption option, T t) -> void {
@@ -80,9 +64,15 @@ namespace http {
 
         auto pre_perform() -> void;
 
-        auto post_perform(CURLcode code) -> void;
+        auto post_perform(
+            CURLcode code,
+            std::exception_ptr exception
+        ) -> http::response;
     public:
         using header_type = std::pair<std::string_view, std::string_view>;
+
+        std::string_view method = "GET";
+        http::url url;
 
         request();
 
@@ -96,33 +86,29 @@ namespace http {
 
         auto operator=(request&& other) -> request&;
 
-        auto body(std::string_view data) -> void;
+        auto content_type(const media_type& type) -> void;
 
-        auto collect() -> ext::jtask<std::string>;
+        auto data(std::string_view data) -> void;
+
+        auto download(const std::filesystem::path& location) -> void;
 
         auto follow_redirects(bool enable) -> void;
 
-        auto headers(std::initializer_list<header_type> headers) -> void;
-
-        auto method(http::method method) -> void;
-
-        [[nodiscard("return value's destructor resets custom method")]]
-        auto method(
-            http::method method,
-            std::string_view custom
-        ) -> method_guard;
+        template <typename T>
+        auto header(std::string_view name, const T& value) -> void {
+            const auto item = fmt::format("{}: {}", name, value);
+            headers = curl_slist_append(headers, item.data());
+        }
 
         auto perform() -> http::response;
 
-        auto perform(http::client& client) -> ext::task<http::response>;
+        auto perform(http::session& session) -> ext::task<http::response>;
 
-        auto response() const noexcept -> http::response;
+        auto pipe() -> readable_stream;
 
-        auto stream() -> readable_stream;
+        auto pipe(FILE* file) -> void;
 
-        auto url() -> http::url&;
-
-        auto url(std::string_view url) -> void;
+        auto upload(const std::filesystem::path& file) -> void;
     };
 }
 

@@ -3,18 +3,34 @@
 #include <coroutine>
 #include <curl/curl.h>
 #include <ext/coroutine>
+#include <fmt/format.h>
 #include <span>
 
 namespace http {
     class stream {
-        CURL* handle;
+        friend class fmt::formatter<stream>;
+
+        CURL* handle = nullptr;
         std::coroutine_handle<> coroutine;
         std::span<std::byte> data;
         bool eof = false;
     public:
+        bool aborted = false;
         bool paused = false;
 
+        stream() = default;
+
         explicit stream(CURL* handle);
+
+        stream(const stream&) = delete;
+
+        stream(stream&& other);
+
+        ~stream();
+
+        auto operator=(const stream&) -> stream& = delete;
+
+        auto operator=(stream&& other) -> stream&;
 
         auto awaiting() const noexcept -> bool;
 
@@ -26,7 +42,11 @@ namespace http {
 
         auto await_resume() noexcept -> std::span<std::byte>;
 
+        auto close() -> void;
+
         auto end() noexcept -> void;
+
+        auto expected_size() const -> long;
 
         auto write(std::span<std::byte> data) -> void;
     };
@@ -42,12 +62,29 @@ namespace http {
 
         readable_stream(readable_stream&& other);
 
+        ~readable_stream();
+
         auto operator=(const readable_stream&) -> readable_stream& = delete;
 
         auto operator=(readable_stream&& other) -> readable_stream&;
 
-        auto collect() -> ext::task<std::string>;
+        auto expected_size() const noexcept -> long;
 
         auto read() -> ext::task<std::span<std::byte>>;
+    };
+}
+
+namespace fmt {
+    template <>
+    struct formatter<http::stream> {
+        template <typename ParseContext>
+        constexpr auto parse(ParseContext& ctx) {
+            return ctx.begin();
+        }
+
+        template <typename FormatContext>
+        auto format(const http::stream& stream, FormatContext& ctx) {
+            return format_to(ctx.out(), "request ({})", ptr(stream.handle));
+        }
     };
 }
