@@ -119,8 +119,12 @@ namespace http {
         header("content-type", type);
     }
 
-    auto request::data(std::string_view data) -> void {
-        body = data;
+    auto request::data(std::string&& data) -> void {
+        body.emplace<std::string>(std::move(data));
+    }
+
+    auto request::data_view(std::string_view data) -> void {
+        body.emplace<std::string_view>(data);
     }
 
     auto request::download(const fs::path& location) -> void {

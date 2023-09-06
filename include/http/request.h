@@ -46,7 +46,7 @@ namespace http {
 
         CURL* handle;
         curl_slist* headers = nullptr;
-        std::variant<std::monostate, std::string_view, file> body;
+        std::variant<std::monostate, std::string, std::string_view, file> body;
         std::variant<std::string, file, FILE*, http::stream> response_data;
 
         template <typename T>
@@ -88,7 +88,9 @@ namespace http {
 
         auto content_type(const media_type& type) -> void;
 
-        auto data(std::string_view data) -> void;
+        auto data(std::string&& data) -> void;
+
+        auto data_view(std::string_view data) -> void;
 
         auto download(const std::filesystem::path& location) -> void;
 

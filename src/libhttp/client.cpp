@@ -58,10 +58,19 @@ namespace http {
     }
 
     auto client::request::data(
+        std::string&& data,
+        std::optional<std::reference_wrapper<const media_type>> content_type
+    ) -> request& {
+        req.data(std::move(data));
+        if (content_type) req.content_type(content_type->get());
+        return *this;
+    }
+
+    auto client::request::data_view(
         std::string_view data,
         std::optional<std::reference_wrapper<const media_type>> content_type
     ) -> request& {
-        req.data(data);
+        req.data_view(data);
         if (content_type) req.content_type(content_type->get());
         return *this;
     }
@@ -143,10 +152,19 @@ namespace http {
     }
 
     auto client::request::text(
+        std::string&& data,
+        const media_type& content_type
+    ) -> request& {
+        req.data(std::move(data));
+        req.content_type(content_type);
+        return *this;
+    }
+
+    auto client::request::text_view(
         std::string_view data,
         const media_type& content_type
     ) -> request& {
-        req.data(data);
+        req.data_view(data);
         req.content_type(content_type);
         return *this;
     }

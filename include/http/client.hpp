@@ -26,6 +26,13 @@ namespace http {
             auto data() -> std::string;
 
             auto data(
+                std::string&& data,
+                std::optional<std::reference_wrapper<
+                    const media_type
+                >> content_type
+            ) -> request&;
+
+            auto data_view(
                 std::string_view data,
                 std::optional<std::reference_wrapper<
                     const media_type
@@ -86,6 +93,11 @@ namespace http {
             auto send_task() -> ext::task<>;
 
             auto text(
+                std::string&& data,
+                const media_type& content_type = media::utf8_text
+            ) -> request&;
+
+            auto text_view(
                 std::string_view data,
                 const media_type& content_type = media::utf8_text
             ) -> request&;

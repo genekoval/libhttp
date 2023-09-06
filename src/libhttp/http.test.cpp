@@ -72,7 +72,7 @@ TEST_F(HttpTest, Send) {
     netcore::run([this]() -> ext::task<> {
         request.url.path("/echo");
         request.method = "POST";
-        request.data("Hello, world!");
+        request.data_view("Hello, world!");
 
         const auto res = co_await request.perform(session);
 
@@ -85,7 +85,7 @@ TEST_F(HttpTest, GetBodyData) {
     netcore::run([this]() -> ext::task<> {
         request.url.path("/echo");
         request.method = "GET";
-        request.data("Body Data");
+        request.data_view("Body Data");
 
         const auto res = co_await request.perform(session);
 
