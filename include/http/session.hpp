@@ -42,14 +42,17 @@ namespace http {
         CURLM* handle;
         std::unordered_map<
             CURL*,
-            std::reference_wrapper<netcore::event<CURLcode>>
+            std::reference_wrapper<ext::continuation<CURLcode>>
         > handles;
         int running_handles = 0;
         netcore::timer timer;
 
         auto action(curl_socket_t sockfd, int ev_bitmask = 0) -> void;
 
-        auto add(CURL* handle, netcore::event<CURLcode>& event) -> void;
+        auto add(
+            CURL* easy_handle,
+            ext::continuation<CURLcode>& continuation
+        ) -> void;
 
         [[nodiscard]]
         auto assign(socket& sock) -> bool;
@@ -68,7 +71,7 @@ namespace http {
 
         auto read_info() -> void;
 
-        auto remove(CURL* handle) -> netcore::event<CURLcode>&;
+        auto remove(CURL* easy_handle) -> ext::continuation<CURLcode>&;
 
         auto set(CURLMoption option, auto value) -> void {
             const auto code = curl_multi_setopt(handle, option, value);
@@ -92,7 +95,7 @@ namespace http {
 
         auto operator=(session&&) -> session& = delete;
 
-        auto perform(CURL* req) -> ext::task<CURLcode>;
+        auto perform(CURL* easy_handle) -> ext::task<CURLcode>;
     };
 }
 

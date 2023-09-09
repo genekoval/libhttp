@@ -173,8 +173,11 @@ namespace http {
         read_info();
     }
 
-    auto session::add(CURL* handle, netcore::event<CURLcode>& event) -> void {
-        const auto code = curl_multi_add_handle(this->handle, handle);
+    auto session::add(
+        CURL* easy_handle,
+        ext::continuation<CURLcode>& continuation
+    ) -> void {
+        const auto code = curl_multi_add_handle(handle, easy_handle);
 
         if (code != CURLM_OK) throw client_error(
             "failed to add curl handle to client ({}): {}",
@@ -182,7 +185,7 @@ namespace http {
             curl_multi_strerror(code)
         );
 
-        handles.insert({handle, event});
+        handles.insert({easy_handle, continuation});
     }
 
     auto session::assign(socket& sock) -> bool {
@@ -241,6 +244,14 @@ namespace http {
         action(CURL_SOCKET_TIMEOUT);
     }
 
+    auto session::perform(CURL* easy_handle) -> ext::task<CURLcode> {
+        auto transfer_complete = ext::continuation<CURLcode>();
+
+        add(easy_handle, transfer_complete);
+
+        co_return co_await transfer_complete;
+    }
+
     auto session::read_info() -> void {
         TIMBER_TRACE("{} checking for messages", *this);
 
@@ -262,7 +273,7 @@ namespace http {
                     fmt::ptr(handle)
                 );
 
-                transfer_complete.emit(code);
+                transfer_complete.resume(code);
             }
 
             TIMBER_TRACE(
@@ -274,8 +285,8 @@ namespace http {
         } while (message);
     }
 
-    auto session::remove(CURL* handle) -> netcore::event<CURLcode>& {
-        const auto code =  curl_multi_remove_handle(this->handle, handle);
+    auto session::remove(CURL* easy_handle) -> ext::continuation<CURLcode>& {
+        const auto code =  curl_multi_remove_handle(handle, easy_handle);
 
         if (code != CURLM_OK) {
             TIMBER_ERROR(
@@ -285,20 +296,12 @@ namespace http {
             );
         }
 
-        const auto result = handles.find(handle);
+        const auto result = handles.find(easy_handle);
         assert(result != handles.end());
 
-        auto& transfer_complete = result->second.get();
+        const auto transfer_complete = result->second;
         handles.erase(result);
 
         return transfer_complete;
-    }
-
-    auto session::perform(CURL* req) -> ext::task<CURLcode> {
-        auto transfer_complete = netcore::event<CURLcode>();
-
-        add(req, transfer_complete);
-
-        co_return co_await transfer_complete.listen();
     }
 }
