@@ -44,8 +44,6 @@ namespace http {
             CURL*,
             std::reference_wrapper<netcore::event<CURLcode>>
         > handles;
-        netcore::event<> messages;
-        ext::jtask<> message_task;
         int running_handles = 0;
         netcore::timer timer;
 
@@ -81,8 +79,6 @@ namespace http {
                 curl_multi_strerror(code)
             );
         }
-
-        auto wait_for_messages() -> ext::jtask<>;
     public:
         session();
 

@@ -122,7 +122,6 @@ namespace http {
 
     session::session() :
         handle(curl_multi_init()),
-        message_task(wait_for_messages()),
         timer(netcore::timer::monotonic())
     {
         if (!handle) throw client_error("failed to create curl multi handle");
@@ -171,7 +170,7 @@ namespace http {
             running_handles == 1 ? "" : "s"
         );
 
-        messages.emit();
+        read_info();
     }
 
     auto session::add(CURL* handle, netcore::event<CURLcode>& event) -> void {
@@ -266,7 +265,12 @@ namespace http {
                 transfer_complete.emit(code);
             }
 
-            TIMBER_TRACE("{} {:L} additional messages in queue", *this, queue);
+            TIMBER_TRACE(
+                "{} {:L} additional message{} in queue",
+                *this,
+                queue,
+                queue == 1 ? "" : "s"
+            );
         } while (message);
     }
 
@@ -296,15 +300,5 @@ namespace http {
         add(req, transfer_complete);
 
         co_return co_await transfer_complete.listen();
-    }
-
-    auto session::wait_for_messages() -> ext::jtask<> {
-        while (true) {
-            TIMBER_TRACE("{} waiting for messages", *this);
-
-            co_await messages.listen();
-
-            read_info();
-        }
     }
 }
