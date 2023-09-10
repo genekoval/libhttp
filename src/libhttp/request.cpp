@@ -5,11 +5,6 @@
 namespace fs = std::filesystem;
 
 namespace {
-    using http::file;
-    using http::file_deleter;
-    using http::file_stream;
-    using http::request;
-
     template <typename... Ts>
     struct overloaded : Ts... {
         using Ts::operator()...;
@@ -17,77 +12,9 @@ namespace {
 
     template <typename... Ts>
     overloaded(Ts...) -> overloaded<Ts...>;
-
-    auto open(const fs::path& path, CURL* handle, const char* mode) -> file {
-        if (auto* stream = std::fopen(path.c_str(), mode)) {
-            TIMBER_DEBUG(
-                R"(request ({}) opened file "{}")",
-                fmt::ptr(handle),
-                path.native()
-            );
-
-#ifndef NDEBUG
-            return file {
-                .stream = file_stream(stream, file_deleter {
-                    .handle = handle,
-                    .path = path
-                }),
-                .size = fs::file_size(path)
-            };
-#else
-            return file {
-                .stream = file_stream(file),
-                .size = fs::file_size(path)
-            };
-#endif
-        }
-
-        TIMBER_DEBUG(
-            R"(request ({}) failed to open file "{}")",
-            fmt::ptr(handle),
-            path.native()
-        );
-
-        throw ext::system_error(fmt::format(
-            R"(Failed to open file "{}")",
-            path.native()
-        ));
-    }
 }
 
 namespace http {
-    auto file_deleter::operator()(FILE* file) const noexcept -> void {
-        if (!file) return;
-
-        if (fclose(file) == 0) {
-#ifndef NDEBUG
-            TIMBER_DEBUG(
-                R"(request ({}) closed file "{}")",
-                fmt::ptr(handle),
-                path.native()
-            );
-#endif
-        }
-        else {
-            const auto error = std::error_code(errno, std::generic_category());
-
-#ifndef NDEBUG
-            TIMBER_ERROR(
-                R"(request ({}) failed to close file stream "{}": {})",
-                fmt::ptr(handle),
-                path.native(),
-                error.message()
-            );
-#else
-            TIMBER_ERROR(
-                R"(Failed to close file stream "{}": {})",
-                path.native(),
-                error.message()
-            );
-#endif
-        }
-    }
-
     request::request() : handle(curl_easy_init()) {
         if (!handle) throw client_error("Failed to create curl easy handle");
     }
@@ -128,11 +55,41 @@ namespace http {
     }
 
     auto request::download(const fs::path& location) -> void {
-        response_data = open(location, handle, "w");
+        response_data = open(location, "w");
     }
 
     auto request::follow_redirects(bool enable) -> void {
         set(CURLOPT_FOLLOWLOCATION, enable);
+    }
+
+    auto request::open(
+        const std::filesystem::path& path,
+        const char* mode
+    ) const -> file {
+        if (auto stream = file_stream(std::fopen(path.c_str(), mode))) {
+            TIMBER_DEBUG(
+                R"({} opened file stream ({}) for "{}")",
+                *this,
+                fmt::ptr(stream.get()),
+                path.native()
+            );
+
+            return file {
+                .stream = std::move(stream),
+                .size = fs::file_size(path)
+            };
+        }
+
+        TIMBER_DEBUG(
+            R"({} failed to open file "{}")",
+            *this,
+            path.native()
+        );
+
+        throw ext::system_error(fmt::format(
+            R"(Failed to open file "{}")",
+            path.native()
+        ));
     }
 
     auto request::perform() -> http::response {
@@ -256,7 +213,7 @@ namespace http {
     }
 
     auto request::upload(const fs::path& file) -> void {
-        body = open(file, handle, "r");
+        body = open(file, "r");
     }
 
     auto request::write_stream(

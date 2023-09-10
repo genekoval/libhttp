@@ -1,5 +1,6 @@
 #pragma once
 
+#include "file.hpp"
 #include "stream.hpp"
 #include "url.h"
 
@@ -9,21 +10,6 @@
 #include <timber/timber>
 
 namespace http {
-    struct file_deleter {
-#ifndef NDEBUG
-        CURL* handle;
-        std::filesystem::path path;
-#endif
-        auto operator()(FILE* file) const noexcept -> void;
-    };
-
-    using file_stream = std::unique_ptr<FILE, file_deleter>;
-
-    struct file {
-        file_stream stream;
-        std::size_t size;
-    };
-
     class request {
         friend class session;
         friend class method_guard;
@@ -49,6 +35,18 @@ namespace http {
         std::variant<std::monostate, std::string, std::string_view, file> body;
         std::variant<std::string, file, FILE*, http::stream> response_data;
 
+        auto open(
+            const std::filesystem::path& path,
+            const char* mode
+        ) const -> file;
+
+        auto pre_perform() -> void;
+
+        auto post_perform(
+            CURLcode code,
+            std::exception_ptr exception
+        ) -> http::response;
+
         template <typename T>
         auto set(CURLoption option, T t) -> void {
             const auto result = curl_easy_setopt(handle, option, t);
@@ -61,13 +59,6 @@ namespace http {
                 );
             }
         }
-
-        auto pre_perform() -> void;
-
-        auto post_perform(
-            CURLcode code,
-            std::exception_ptr exception
-        ) -> http::response;
     public:
         using header_type = std::pair<std::string_view, std::string_view>;
 
