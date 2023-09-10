@@ -23,7 +23,7 @@ namespace http::server {
 
     template <typename T>
     class node {
-        node_type type;
+        node_type type = node_type::static_route;
         std::string prefix;
         std::optional<T> value;
         std::vector<node> children;
