@@ -414,17 +414,17 @@ namespace http::server {
             if (pause) pause = nullptr;
             else {
                 auto result = co_await ext::race(
-                    await_close(),
-                    socket.read()
+                    socket.read(),
+                    await_close()
                 );
 
-                if (result.index() == 0) {
+                if (result.index() == 1) {
                     TIMBER_TRACE("{} closing", *this);
-                    co_await std::get<0>(std::move(result));
+                    co_await std::get<1>(std::move(result));
                     co_return;
                 }
 
-                bytes = co_await std::get<1>(std::move(result));
+                bytes = co_await std::get<0>(std::move(result));
             }
 
             const auto rv = nghttp2_session_mem_recv(
