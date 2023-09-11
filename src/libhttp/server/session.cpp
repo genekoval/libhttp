@@ -438,7 +438,7 @@ namespace http::server {
             // Always try calling nghttp2_session_mem_send() after calling
             // nghttp2_session_mem_recv() to ensure that we don't miss
             // sending any pending WINDOW_UPDATE frames.
-            else if (send) send();
+            else co_await send;
         } while (!bytes.empty());
     }
 
