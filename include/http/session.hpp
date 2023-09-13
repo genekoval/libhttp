@@ -8,22 +8,24 @@
 
 namespace http {
     class session final {
-        friend struct fmt::formatter<session>;
-
         class socket {
-            curl_socket_t sockfd;
-            netcore::system_event event;
+            std::shared_ptr<netcore::runtime::event> event;
         public:
             socket(curl_socket_t sockfd);
 
             [[nodiscard]]
             auto fd() const noexcept -> curl_socket_t;
 
+            auto remove() const noexcept -> void;
+
             [[nodiscard]]
-            auto update(int what) -> bool;
+            auto update(int what) noexcept -> bool;
 
             auto wait() -> ext::task<int>;
         };
+
+        friend struct fmt::formatter<session>;
+        friend struct fmt::formatter<session::socket>;
 
         static auto socket_callback(
             CURL* easy,

@@ -8,64 +8,82 @@
 
 using std::chrono::milliseconds;
 
+namespace fmt {
+    template <>
+    struct formatter<http::session::socket> {
+        template <typename ParseContext>
+        constexpr auto parse(ParseContext& ctx) {
+            return ctx.begin();
+        }
+
+        template <typename FormatContext>
+        auto format(const http::session::socket& socket, FormatContext& ctx) {
+            return format_to(ctx.out(), "curl socket ({})", socket.fd());
+        }
+    };
+}
+
 namespace http {
     session::socket::socket(curl_socket_t sockfd) :
-        sockfd(sockfd),
-        event(sockfd)
+        event(netcore::runtime::event::create(sockfd, EPOLLIN | EPOLLOUT))
     {}
 
     auto session::socket::fd() const noexcept -> curl_socket_t {
-        return sockfd;
+        return event->fd();
     }
 
-    auto session::socket::update(int what) -> bool {
+    auto session::socket::remove() const noexcept -> void {
+        if (const auto error = event->remove()) {
+            TIMBER_ERROR(
+                "Failed to remove file descriptor from runtime: {}",
+                error.message()
+            );
+        }
+
+        event->cancel();
+    }
+
+    auto session::socket::update(int what) noexcept -> bool {
         std::uint32_t events = 0;
 
         switch (what) {
             case CURL_POLL_IN:
-                TIMBER_TRACE("socket ({}) wants to read", sockfd);
+                TIMBER_TRACE("{} wants to read", *this);
                 events = EPOLLIN;
                 break;
             case CURL_POLL_OUT:
-                TIMBER_TRACE("socket ({}) wants to write", sockfd);
+                TIMBER_TRACE("{} wants to write", *this);
                 events = EPOLLOUT;
                 break;
             case CURL_POLL_INOUT:
-                TIMBER_TRACE("socket ({}) wants to read and write", sockfd);
+                TIMBER_TRACE("{} wants to read and write", *this);
                 events = EPOLLIN | EPOLLOUT;
                 break;
             case CURL_POLL_REMOVE:
-                TIMBER_TRACE("socket ({}) removal requested", sockfd);
-                event.cancel();
+                TIMBER_TRACE("{} removal requested", *this);
+                remove();
                 return true;
             default:
                 TIMBER_ERROR("Unexpected curl socket status ({})", what);
                 return false;
         }
 
-        try {
-            event.set(events);
-            return true;
-        }
-        catch (const std::exception& ex) {
-            TIMBER_ERROR("Failed to update curl socket events: {}", ex.what());
-        }
-
-        return false;
+        event->events = events;
+        return true;
     }
 
     auto session::socket::wait() -> ext::task<int> {
-        const auto events = co_await event.wait();
+        const auto events = co_await event->out();
         int result = 0;
 
         if (events & EPOLLIN) {
             result |= CURL_CSELECT_IN;
-            TIMBER_TRACE("socket ({}) ready to read", sockfd);
+            TIMBER_TRACE("{} ready to read", *this);
         }
 
         if (events & EPOLLOUT) {
             result |= CURL_CSELECT_OUT;
-            TIMBER_TRACE("socket ({}) ready to write", sockfd);
+            TIMBER_TRACE("{} ready to write", *this);
         }
 
         co_return result;
@@ -84,7 +102,7 @@ namespace http {
 
         if (socketp) {
             auto& socket = *static_cast<http::session::socket*>(socketp);
-            TIMBER_TRACE("socket ({}) update requested", sockfd);
+            TIMBER_TRACE("{} update requested", socket);
             if (!socket.update(what)) return -1;
         }
         else {
@@ -227,7 +245,7 @@ namespace http {
             const auto events = co_await socket.wait();
 
             if (events == 0) {
-                TIMBER_TRACE("socket ({}) task complete", socket.fd());
+                TIMBER_TRACE("{} task complete", socket);
                 co_return;
             }
 
