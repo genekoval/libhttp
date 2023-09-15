@@ -23,7 +23,7 @@ namespace http::server::extractor {
     }
 
     auto data<json>::read(request& request) -> ext::task<json> {
-        request.expect_content_type(media::json);
+        request.expect_content_type(media::json());
         co_return json::parse(co_await data<std::string>::read(request));
     }
 }

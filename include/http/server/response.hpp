@@ -1,5 +1,7 @@
 #pragma once
 
+#include <http/media_type.hpp>
+
 #include <netcore/netcore>
 #include <string>
 #include <unordered_map>
@@ -35,8 +37,8 @@ namespace http::server {
             headers.emplace("content-length", std::to_string(length));
         }
 
-        auto content_type(std::string_view type) -> void {
-            headers.emplace("content-type", type);
+        auto content_type(const media_type& type) -> void {
+            headers.emplace("content-type", type.str());
         }
 
         template <response_data T>

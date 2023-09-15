@@ -10,7 +10,7 @@ namespace http::server {
         static auto send(response& res, const json& json) -> void {
             auto string = json.dump();
 
-            res.content_type("application/json");
+            res.content_type(media::json());
             res.content_length(string.size());
             res.data = std::move(string);
         }

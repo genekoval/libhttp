@@ -8,99 +8,68 @@
 #include <vector>
 
 namespace http {
-    struct name_value {
-        std::string name;
-        std::string value;
+    class media_type {
+        using size_type = std::uint16_t;
+        enum { max_size = std::numeric_limits<size_type>::max() };
 
-        constexpr name_value(std::string_view name, std::string_view value) :
-            name(name),
-            value(value)
-        {}
+        std::string storage;
 
-        constexpr auto operator==(
-            const name_value& other
-        ) const noexcept -> bool = default;
-    };
+        size_type type_len = 0;
+        size_type subtype_len = 0;
+        size_type param_name_len = 0;
+        size_type param_value_len = 0;
+    public:
+        struct name_value {
+            std::string_view name;
+            std::string_view value;
 
-    struct media_type {
-        std::string type;
-        std::string subtype;
-        std::optional<name_value> parameter;
+            constexpr name_value(
+                std::string_view name,
+                std::string_view value
+            ) :
+                name(name),
+                value(value)
+            {}
 
-        constexpr media_type(const char* str) :
-            media_type(std::string_view(str))
-        {}
+            constexpr auto operator==(
+                const name_value& other
+            ) const noexcept -> bool = default;
+        };
 
-        constexpr media_type(std::string_view type) {
-            auto begin = type.begin();
-            auto it = begin;
-            const auto end = type.end();
+        constexpr media_type() = default;
 
-            while (it != end && *it != '/') ++it;
-            if (it == end) throw invalid_media_type(type);
+        media_type(const char* str);
 
-            this->type = {begin, it};
-            begin = ++it;
+        media_type(std::string_view type);
 
-            while (it != end && *it != ';') ++it;
-            if (it == begin) throw invalid_media_type(type);
+        auto operator==(const media_type& other) const noexcept -> bool;
 
-            subtype = {begin, it};
+        auto parameter() const noexcept -> std::optional<name_value>;
 
-            if (*it == ';') {
-                if (*++it == ' ') ++it;
+        auto str() const noexcept -> std::string_view;
 
-                begin = it;
+        auto subtype() const noexcept -> std::string_view;
 
-                while (it != end && *it != '=') ++it;
-                if (it == end) throw invalid_media_type(type);
-
-                auto name = std::string_view(begin, it);
-                begin = ++it;
-
-                while (it != end) ++it;
-                if (it == begin) throw invalid_media_type(type);
-
-                auto value = std::string_view(begin, it);
-
-                parameter.emplace(name, value);
-            }
-        }
-
-        constexpr auto operator==(
-            const media_type& other
-        ) const noexcept -> bool = default;
+        auto type() const noexcept -> std::string_view;
     };
 
     namespace media {
-        constexpr media_type json = "application/json";
-        constexpr media_type octet_stream = "application/octet-stream";
-        constexpr media_type plain_text = "text/plain";
-        constexpr media_type utf8_text = "text/plain; charset=UTF-8";
+        auto json() noexcept -> const media_type&;
+        auto octet_stream() noexcept -> const media_type&;
+        auto plain_text() noexcept -> const media_type&;
+        auto utf8_text() noexcept -> const media_type&;
     }
 }
 
 namespace fmt {
     template <>
-    struct formatter<http::media_type> {
-        template <typename ParseContext>
-        constexpr auto parse(ParseContext& ctx) const {
-            return ctx.begin();
-        }
-
+    struct formatter<http::media_type> : formatter<std::string_view> {
         template <typename FormatContext>
         constexpr auto format(
             const http::media_type& media,
             FormatContext& ctx
         ) const {
-            auto it = format_to(ctx.out(), "{}/{}", media.type, media.subtype);
-
-            if (media.parameter) {
-                const auto& param = *media.parameter;
-                it = format_to(ctx.out(), "; {}={}", param.name, param.value);
-            }
-
-            return it;
+            return formatter<std::string_view>::format(media.str(), ctx);
         }
     };
 }

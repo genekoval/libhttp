@@ -94,17 +94,17 @@ namespace http {
 
             auto text(
                 std::string&& data,
-                const media_type& content_type = media::utf8_text
+                const media_type& content_type = media::utf8_text()
             ) -> request&;
 
             auto text_view(
                 std::string_view data,
-                const media_type& content_type = media::utf8_text
+                const media_type& content_type = media::utf8_text()
             ) -> request&;
 
             auto upload(
                 const std::filesystem::path& path,
-                const media_type& content_type = media::octet_stream
+                const media_type& content_type = media::octet_stream()
             ) -> request&;
         };
 
