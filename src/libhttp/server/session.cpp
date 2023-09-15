@@ -208,15 +208,18 @@ namespace {
 
         switch (frame->hd.type) {
             case NGHTTP2_HEADERS:
-                TIMBER_TRACE("Stream ID {} header frame complete", stream.id);
+                TIMBER_DEBUG("Stream ID {} header frame complete", stream.id);
+
+                if (frame->hd.flags & NGHTTP2_FLAG_END_STREAM) {
+                    stream.request.eof = true;
+                }
+
                 session.handle_request(stream);
                 break;
             case NGHTTP2_DATA:
-                TIMBER_TRACE("Stream ID {} data frame complete", stream.id);
-                if (
-                    frame->hd.flags & NGHTTP2_FLAG_END_STREAM &&
-                    stream.request.continuation
-                ) {
+                TIMBER_DEBUG("Stream ID {} data frame complete", stream.id);
+
+                if (frame->hd.flags & NGHTTP2_FLAG_END_STREAM) {
                     stream.request.data = std::span<const std::byte>();
                     stream.request.eof = true;
                     stream.request.continuation.resume();
