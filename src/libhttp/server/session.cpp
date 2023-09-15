@@ -121,7 +121,9 @@ namespace {
             nghttp2_session_get_stream_user_data(handle, stream_id)
         );
 
-        if (stream.request.discard) {
+        auto& request = stream.request;
+
+        if (request.discard) {
             TIMBER_DEBUG(
                 "Stream ID {} discarded data chunk of {:L} bytes",
                 stream_id,
@@ -131,27 +133,26 @@ namespace {
             return 0;
         }
 
-        if (stream.request.continuation) {
-            TIMBER_TRACE(
-                "Stream ID {} received data chunk of {:L} bytes",
-                stream_id,
-                len
-            );
+        TIMBER_TRACE(
+            "Stream ID {} received data chunk of {:L} bytes",
+            stream_id,
+            len
+        );
 
-            stream.request.data = std::span<const std::byte>(
-                reinterpret_cast<const std::byte*>(data),
-                len
-            );
+        request.data = std::span<const std::byte>(
+            reinterpret_cast<const std::byte*>(data),
+            len
+        );
 
-            stream.request.continuation.resume();
-
-            return 0;
+        if (request.continuation) {
+            request.continuation.resume();
+            if (request.discard || request.continuation) return 0;
         }
 
         TIMBER_DEBUG("Stream ID {} attempting to pause data recv", stream_id);
 
         auto& session = *reinterpret_cast<http::server::session*>(user_data);
-        session.pause = &stream.request.continuation;
+        session.pause = &request.continuation;
 
         return NGHTTP2_ERR_PAUSE;
     }
@@ -411,21 +412,18 @@ namespace http::server {
         auto bytes = std::span<const std::byte>();
 
         do {
-            if (pause) pause = nullptr;
-            else {
-                auto result = co_await ext::race(
-                    socket.read(),
-                    await_close()
-                );
+            auto result = co_await ext::race(
+                socket.read(),
+                await_close()
+            );
 
-                if (result.index() == 1) {
-                    TIMBER_TRACE("{} closing", *this);
-                    co_await std::get<1>(std::move(result));
-                    co_return;
-                }
-
-                bytes = co_await std::get<0>(std::move(result));
+            if (result.index() == 1) {
+                TIMBER_TRACE("{} closing", *this);
+                co_await std::get<1>(std::move(result));
+                co_return;
             }
+
+            bytes = co_await std::get<0>(std::move(result));
 
             const auto rv = nghttp2_session_mem_recv(
                 handle,
@@ -434,11 +432,13 @@ namespace http::server {
             );
 
             if (rv < 0) throw std::runtime_error(nghttp2_strerror(rv));
-            else if (rv == 0 && pause) co_await *pause;
+
             // Always try calling nghttp2_session_mem_send() after calling
             // nghttp2_session_mem_recv() to ensure that we don't miss
             // sending any pending WINDOW_UPDATE frames.
-            else co_await send;
+            co_await send;
+
+            if (pause) co_await *std::exchange(pause, nullptr);
         } while (!bytes.empty());
     }
 
@@ -515,6 +515,9 @@ namespace http::server {
             }
 
             co_await socket.flush();
+
+            TIMBER_TRACE("{} send complete", *this);
+
             co_await send;
         }
     }
