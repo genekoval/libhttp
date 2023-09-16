@@ -1,7 +1,7 @@
 #pragma once
 
-#include "error.h"
-
+#include <fmt/format.h>
+#include <limits>
 #include <optional>
 #include <stdexcept>
 #include <string>
@@ -51,6 +51,14 @@ namespace http {
         auto subtype() const noexcept -> std::string_view;
 
         auto type() const noexcept -> std::string_view;
+    };
+
+    class invalid_media_type : public std::invalid_argument {
+        std::string type;
+    public:
+        invalid_media_type(std::string_view type);
+
+        auto invalid_type() const noexcept -> std::string_view;
     };
 
     namespace media {

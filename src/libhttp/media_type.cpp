@@ -106,6 +106,14 @@ namespace http {
         return {storage.data(), type_len};
     }
 
+    invalid_media_type::invalid_media_type(std::string_view type) :
+        invalid_argument(fmt::format("Invalid media type '{}'", type))
+    {}
+
+    auto invalid_media_type::invalid_type() const noexcept -> std::string_view {
+        return type;
+    }
+
     namespace media {
         auto json() noexcept -> const media_type& {
             static const media_type type = "application/json";
