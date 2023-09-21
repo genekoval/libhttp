@@ -380,6 +380,7 @@ namespace http::server {
             switch (code) {
                 case std::errc::connection_reset:
                     TIMBER_LOG(lvl, ex.what());
+                    break;
                 default:
                     TIMBER_ERROR(ex.what());
             }
