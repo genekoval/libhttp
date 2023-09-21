@@ -23,6 +23,8 @@ namespace http::server {
 
         auto await_close() -> ext::task<>;
 
+        auto idle() const noexcept -> bool;
+
         auto recv() -> ext::task<>;
 
         auto respond(stream& stream) -> ext::task<>;

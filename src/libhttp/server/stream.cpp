@@ -92,6 +92,10 @@ namespace http::server {
         }
     }
 
+    auto stream::empty() const noexcept -> bool {
+        return next == this;
+    }
+
     auto stream::link(stream& other) noexcept -> void {
         other.next = this;
         other.prev = prev;

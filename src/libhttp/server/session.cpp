@@ -371,6 +371,22 @@ namespace http::server {
         catch (const netcore::eof&) {
             TIMBER_DEBUG("{} received unexpected EOF", *this);
         }
+        catch (const std::system_error& ex) {
+            using timber::level;
+
+            const auto code = std::errc(ex.code().value());
+            const auto lvl = idle() ? level::debug : level::error;
+
+            switch (code) {
+                case std::errc::connection_reset:
+                    TIMBER_LOG(lvl, ex.what());
+                default:
+                    TIMBER_ERROR(ex.what());
+            }
+        }
+        catch (const std::exception& ex) {
+            TIMBER_ERROR(ex.what());
+        }
 
         co_await tasks.await();
     }
@@ -393,6 +409,10 @@ namespace http::server {
 
         stream.active = false;
         if (!stream.open) delete &stream;
+    }
+
+    auto session::idle() const noexcept -> bool {
+        return streams.empty();
     }
 
     auto session::link(session& other) noexcept -> void {

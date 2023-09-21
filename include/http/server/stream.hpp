@@ -55,6 +55,8 @@ namespace http::server {
 
         auto delete_all() noexcept -> void;
 
+        auto empty() const noexcept -> bool;
+
         auto link(stream& other) noexcept -> void;
 
         auto recv_header(std::string_view name, std::string_view value) -> void;
