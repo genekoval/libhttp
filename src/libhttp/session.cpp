@@ -44,31 +44,28 @@ namespace http {
     }
 
     auto session::socket::update(int what) noexcept -> bool {
-        std::uint32_t events = 0;
-
         switch (what) {
             case CURL_POLL_IN:
                 TIMBER_TRACE("{} wants to read", *this);
-                events = EPOLLIN;
+                event->events = EPOLLIN;
                 break;
             case CURL_POLL_OUT:
                 TIMBER_TRACE("{} wants to write", *this);
-                events = EPOLLOUT;
+                event->events = EPOLLOUT;
                 break;
             case CURL_POLL_INOUT:
                 TIMBER_TRACE("{} wants to read and write", *this);
-                events = EPOLLIN | EPOLLOUT;
+                event->events = EPOLLIN | EPOLLOUT;
                 break;
             case CURL_POLL_REMOVE:
                 TIMBER_TRACE("{} removal requested", *this);
                 remove();
-                return true;
+                break;
             default:
                 TIMBER_ERROR("Unexpected curl socket status ({})", what);
                 return false;
         }
 
-        event->events = events;
         return true;
     }
 
@@ -76,12 +73,12 @@ namespace http {
         const auto events = co_await event->out();
         int result = 0;
 
-        if (events & EPOLLIN) {
+        if (events & EPOLLIN && this->event->events & EPOLLIN) {
             result |= CURL_CSELECT_IN;
             TIMBER_TRACE("{} ready to read", *this);
         }
 
-        if (events & EPOLLOUT) {
+        if (events & EPOLLOUT && this->event->events & EPOLLOUT) {
             result |= CURL_CSELECT_OUT;
             TIMBER_TRACE("{} ready to write", *this);
         }
@@ -241,16 +238,11 @@ namespace http {
     ) -> ext::detached_task {
         if (!(success = assign(socket) && socket.update(what))) co_return;
 
-        while (true) {
-            const auto events = co_await socket.wait();
-
-            if (events == 0) {
-                TIMBER_TRACE("{} task complete", socket);
-                co_return;
-            }
-
+        while (const auto events = co_await socket.wait()) {
             action(socket.fd(), events);
         }
+
+        TIMBER_TRACE("{} task complete", socket);
     }
 
     auto session::manage_timer(milliseconds timeout) -> ext::detached_task {
