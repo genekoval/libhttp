@@ -48,6 +48,8 @@ namespace http {
         > handles;
         int running_handles = 0;
         netcore::timer timer;
+        ext::continuation<long> timeout;
+        ext::jtask<> timer_task;
 
         auto action(curl_socket_t sockfd, int ev_bitmask = 0) -> void;
 
@@ -67,9 +69,7 @@ namespace http {
             bool& success
         ) -> ext::detached_task;
 
-        auto manage_timer(
-            std::chrono::milliseconds timeout
-        ) -> ext::detached_task;
+        auto manage_timer() -> ext::jtask<>;
 
         auto read_info() -> void;
 

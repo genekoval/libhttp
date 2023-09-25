@@ -128,16 +128,18 @@ namespace http {
 
         TIMBER_TRACE("{} timer callback ({:L})", client, timeout);
 
-        if (timeout_ms == -1) client.timer.disarm();
-        else if (client.timer.waiting()) client.timer.set(timeout);
-        else client.manage_timer(timeout);
+        client.timeout(timeout_ms);
+
+        if (timeout_ms > -1) client.timer.set(timeout);
+        if (timeout_ms <= 0 && client.timer.waiting()) client.timer.disarm();
 
         return 0;
     }
 
     session::session() :
         handle(curl_multi_init()),
-        timer(netcore::timer::monotonic())
+        timer(netcore::timer::monotonic()),
+        timer_task(manage_timer())
     {
         if (!handle) throw client_error("failed to create curl multi handle");
 
@@ -245,13 +247,23 @@ namespace http {
         TIMBER_TRACE("{} task complete", socket);
     }
 
-    auto session::manage_timer(milliseconds timeout) -> ext::detached_task {
-        timer.set(timeout);
+    auto session::manage_timer() -> ext::jtask<> {
+        while (true) {
+            const auto timeout = co_await this->timeout;
 
-        if (timeout == milliseconds::zero()) co_await netcore::yield();
-        else if (!co_await timer.wait()) co_return;
+            switch (timeout) {
+                case -1:
+                    continue;
+                case 0:
+                    co_await netcore::yield();
+                    break;
+                default:
+                    if (!co_await timer.wait()) continue;
+                    break;
+            }
 
-        action(CURL_SOCKET_TIMEOUT);
+            action(CURL_SOCKET_TIMEOUT);
+        }
     }
 
     auto session::perform(CURL* easy_handle) -> ext::task<CURLcode> {
