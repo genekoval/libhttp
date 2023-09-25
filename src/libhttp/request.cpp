@@ -241,7 +241,7 @@ namespace http {
                 real_size
             });
 
-            return real_size;
+            if (stream.awaiting()) return real_size;
         }
 
         TIMBER_DEBUG("{} paused", stream);
