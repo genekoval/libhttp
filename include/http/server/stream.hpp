@@ -70,7 +70,7 @@ struct fmt::formatter<http::server::stream> : formatter<std::string_view> {
         auto buffer = fmt::memory_buffer();
         auto out = std::back_inserter(buffer);
 
-        format_to(
+        fmt::format_to(
             out,
             "Stream ID: {}, Scheme: {}, Authority: {}\n{} {}",
             stream.id,
@@ -81,18 +81,18 @@ struct fmt::formatter<http::server::stream> : formatter<std::string_view> {
         );
 
         if (!stream.request.query.empty()) {
-            format_to(out, "\nQuery ({}):", stream.request.query.size());
+            fmt::format_to(out, "\nQuery ({}):", stream.request.query.size());
 
             for (const auto& entry : stream.request.query) {
-                format_to(out, "\n\t{} = {}", entry.first, entry.second);
+                fmt::format_to(out, "\n\t{} = {}", entry.first, entry.second);
             }
         }
 
         if (!stream.request.headers.empty()) {
-            format_to(out, "\nHeaders ({}):", stream.request.headers.size());
+            fmt::format_to(out, "\nHeaders ({}):", stream.request.headers.size());
 
             for (const auto& entry : stream.request.headers) {
-                format_to(out, "\n\t{}: {}", entry.first, entry.second);
+                fmt::format_to(out, "\n\t{}: {}", entry.first, entry.second);
             }
         }
 

@@ -111,7 +111,7 @@ namespace fmt {
 
         template <typename FormatContext>
         auto format(const http::session& session, FormatContext& ctx) {
-            return format_to(ctx.out(), "session ({})", ptr(session.handle));
+            return fmt::format_to(ctx.out(), "session ({})", ptr(session.handle));
         }
     };
 }

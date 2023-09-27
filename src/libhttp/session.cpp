@@ -18,7 +18,7 @@ namespace fmt {
 
         template <typename FormatContext>
         auto format(const http::session::socket& socket, FormatContext& ctx) {
-            return format_to(ctx.out(), "curl socket ({})", socket.fd());
+            return fmt::format_to(ctx.out(), "curl socket ({})", socket.fd());
         }
     };
 }

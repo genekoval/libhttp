@@ -74,7 +74,7 @@ struct fmt::formatter<http::server::session> : formatter<std::string_view> {
         auto buffer = memory_buffer();
         auto out = std::back_inserter(buffer);
 
-        format_to(out, "HTTP Session ({})", ptr(session.handle));
+        fmt::format_to(out, "HTTP Session ({})", ptr(session.handle));
 
         return formatter<std::string_view>::format(
             {buffer.data(), buffer.size()},

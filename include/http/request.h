@@ -115,7 +115,7 @@ namespace fmt {
 
         template <typename FormatContext>
         auto format(const http::request& request, FormatContext& ctx) {
-            return format_to(ctx.out(), "request ({})", ptr(request.handle));
+            return fmt::format_to(ctx.out(), "request ({})", ptr(request.handle));
         }
     };
 }

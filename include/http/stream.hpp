@@ -84,7 +84,7 @@ namespace fmt {
 
         template <typename FormatContext>
         auto format(const http::stream& stream, FormatContext& ctx) {
-            return format_to(ctx.out(), "request ({})", ptr(stream.handle));
+            return fmt::format_to(ctx.out(), "request ({})", ptr(stream.handle));
         }
     };
 }
