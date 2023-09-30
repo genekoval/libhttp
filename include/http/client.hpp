@@ -102,6 +102,24 @@ namespace http {
                 const media_type& content_type = media::utf8_text()
             ) -> request&;
 
+            template <typename R>
+            auto try_json() -> std::optional<R> {
+                const auto res = req.perform();
+
+                if (res.status() == 404) return std::nullopt;
+                if (res.ok()) return json::parse(res.data());
+                throw error_code(res.status(), res.data());
+            }
+
+            template <typename R>
+            auto try_json_task() -> ext::task<std::optional<R>> {
+                const auto res = co_await req.perform(*session);
+
+                if (res.status() == 404) co_return std::nullopt;
+                if (res.ok()) co_return json::parse(res.data());
+                throw error_code(res.status(), res.data());
+            }
+
             auto upload(
                 const std::filesystem::path& path,
                 const media_type& content_type = media::octet_stream()
