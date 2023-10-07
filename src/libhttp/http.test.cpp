@@ -9,9 +9,7 @@ protected:
     http::session session;
     http::request request;
 
-    HttpTest() {
-        request.url = server;
-    }
+    HttpTest() { request.url = server; }
 };
 
 TEST_F(HttpTest, BlockingRequest) {

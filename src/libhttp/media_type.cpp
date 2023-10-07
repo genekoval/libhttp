@@ -2,8 +2,7 @@
 
 namespace http {
     media_type::media_type(const char* str) :
-        media_type(std::string_view(str))
-    {}
+        media_type(std::string_view(str)) {}
 
     media_type::media_type(std::string_view type) {
         auto begin = type.begin();
@@ -48,11 +47,8 @@ namespace http {
         }
 
         storage.resize(
-            type_len +
-            subtype_len +
-            param_name_len +
-            param_value_len +
-            1 + // '/'
+            type_len + subtype_len + param_name_len + param_value_len +
+            1 +                           // '/'
             (param_name_len == 0 ? 0 : 2) // ';' and '='
         );
 
@@ -77,9 +73,8 @@ namespace http {
         }
     }
 
-    auto media_type::operator==(
-        const media_type& other
-    ) const noexcept -> bool {
+    auto media_type::operator==(const media_type& other) const noexcept
+        -> bool {
         return storage == other.storage;
     }
 
@@ -107,8 +102,7 @@ namespace http {
     }
 
     invalid_media_type::invalid_media_type(std::string_view type) :
-        invalid_argument(fmt::format("Invalid media type '{}'", type))
-    {}
+        invalid_argument(fmt::format("Invalid media type '{}'", type)) {}
 
     auto invalid_media_type::invalid_type() const noexcept -> std::string_view {
         return type;

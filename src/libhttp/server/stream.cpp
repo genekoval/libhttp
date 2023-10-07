@@ -21,11 +21,8 @@ namespace {
         return 0;
     }
 
-    auto percent_decode(
-        std::string_view value,
-        char* buffer,
-        std::size_t& pos
-    ) -> std::string_view {
+    auto percent_decode(std::string_view value, char* buffer, std::size_t& pos)
+        -> std::string_view {
         const auto start = pos;
 
         if (value.size() <= 3) {
@@ -37,18 +34,14 @@ namespace {
             std::size_t i = 0;
 
             while (i < value.size() - 2) {
-                if (
-                    value[i] != '%' ||
-                    !std::isxdigit(value[i + 1]) ||
-                    !std::isxdigit(value[i + 2])
-                ) {
+                if (value[i] != '%' || !std::isxdigit(value[i + 1]) ||
+                    !std::isxdigit(value[i + 2])) {
                     buffer[pos++] = value[i++];
                     continue;
                 }
 
-                const auto n =
-                    (hex_to_uint(value[i + 1]) << 4) +
-                    hex_to_uint(value[i + 2]);
+                const auto n = (hex_to_uint(value[i + 1]) << 4) +
+                               hex_to_uint(value[i + 2]);
 
                 buffer[pos++] = static_cast<char>(n);
                 i += 3;
@@ -73,13 +66,11 @@ namespace http::server {
     stream::~stream() {
         unlink();
 
-        if (request.continuation) request.continuation.resume(
-            std::make_exception_ptr(stream_aborted())
-        );
+        if (request.continuation)
+            request.continuation.resume(std::make_exception_ptr(stream_aborted()
+            ));
 
-        if (id != -1) {
-            TIMBER_TRACE("Stream ID {} closed", id);
-        }
+        if (id != -1) { TIMBER_TRACE("Stream ID {} closed", id); }
     }
 
     auto stream::delete_all() noexcept -> void {
@@ -92,9 +83,7 @@ namespace http::server {
         }
     }
 
-    auto stream::empty() const noexcept -> bool {
-        return next == this;
-    }
+    auto stream::empty() const noexcept -> bool { return next == this; }
 
     auto stream::link(stream& other) noexcept -> void {
         other.next = this;
@@ -152,16 +141,9 @@ namespace http::server {
         }
     }
 
-    auto stream::recv_header(
-        std::string_view name,
-        std::string_view value
-    ) -> void {
-        TIMBER_TRACE(
-            "Stream ID {} received header '{}: {}'",
-            id,
-            name,
-            value
-        );
+    auto stream::recv_header(std::string_view name, std::string_view value)
+        -> void {
+        TIMBER_TRACE("Stream ID {} received header '{}: {}'", id, name, value);
 
         if (name == header::method) request.method = value;
         else if (name == header::path) process_path(value);

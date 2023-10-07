@@ -10,13 +10,9 @@ namespace http::server {
 
     context::context(http::server::router& router) : context(router, 8_KiB) {}
 
-    context::context(
-        http::server::router& router,
-        std::size_t buffer_size
-    ) :
+    context::context(http::server::router& router, std::size_t buffer_size) :
         buffer_size(buffer_size),
-        router(&router)
-    {}
+        router(&router) {}
 
     auto context::connection(netcore::ssl::socket&& client) -> ext::task<> {
         const auto protocol = co_await client.accept();

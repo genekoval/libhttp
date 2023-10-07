@@ -89,7 +89,11 @@ struct fmt::formatter<http::server::stream> : formatter<std::string_view> {
         }
 
         if (!stream.request.headers.empty()) {
-            fmt::format_to(out, "\nHeaders ({}):", stream.request.headers.size());
+            fmt::format_to(
+                out,
+                "\nHeaders ({}):",
+                stream.request.headers.size()
+            );
 
             for (const auto& entry : stream.request.headers) {
                 fmt::format_to(out, "\n\t{}: {}", entry.first, entry.second);

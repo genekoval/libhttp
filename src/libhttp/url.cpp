@@ -9,9 +9,7 @@ namespace http {
         if (!handle) throw client_error("Failed to allocate URL handle");
     }
 
-    url::url(const char* str) : url() {
-        set(CURLUPART_URL, str);
-    }
+    url::url(const char* str) : url() { set(CURLUPART_URL, str); }
 
     url::url(std::string_view string) : url(string.data()) {}
 
@@ -21,9 +19,7 @@ namespace http {
 
     url::url(url&& other) : handle(std::exchange(other.handle, nullptr)) {}
 
-    url::~url() {
-        curl_url_cleanup(handle);
-    }
+    url::~url() { curl_url_cleanup(handle); }
 
     auto url::operator=(const char* str) -> url& {
         set(CURLUPART_URL, str);
@@ -59,13 +55,9 @@ namespace http {
         if (code != CURLUE_OK) throw client_error(curl_url_strerror(code));
     }
 
-    auto url::clear(CURLUPart part) -> void {
-        set(part, nullptr);
-    }
+    auto url::clear(CURLUPart part) -> void { set(part, nullptr); }
 
-    auto url::data() -> CURLU* {
-        return handle;
-    }
+    auto url::data() -> CURLU* { return handle; }
 
     auto url::fragment() const -> std::optional<http::string> {
         return try_get(CURLUPART_FRAGMENT, CURLUE_NO_FRAGMENT);
@@ -97,9 +89,7 @@ namespace http {
         set(CURLUPART_PASSWORD, value);
     }
 
-    auto url::path() const -> http::string {
-        return get(CURLUPART_PATH);
-    }
+    auto url::path() const -> http::string { return get(CURLUPART_PATH); }
 
     auto url::path(std::string_view value) -> void {
         set(CURLUPART_PATH, value);
@@ -113,9 +103,7 @@ namespace http {
         return std::nullopt;
     }
 
-    auto url::port(int value) -> void {
-        port(fmt::to_string(value));
-    }
+    auto url::port(int value) -> void { port(fmt::to_string(value)); }
 
     auto url::port(std::string_view value) -> void {
         set(CURLUPART_PORT, value);
@@ -142,31 +130,20 @@ namespace http {
         set(CURLUPART_SCHEME, value);
     }
 
-    auto url::set(
-        CURLUPart part,
-        const char* content,
-        unsigned int flags
-    ) -> void {
+    auto url::set(CURLUPart part, const char* content, unsigned int flags)
+        -> void {
         check_return_code(curl_url_set(handle, part, content, flags));
     }
 
-    auto url::set(
-        CURLUPart part,
-        std::string_view content,
-        unsigned int flags
-    ) -> void {
+    auto url::set(CURLUPart part, std::string_view content, unsigned int flags)
+        -> void {
         set(part, content.data(), flags);
     }
 
-    auto url::string() const -> http::string {
-        return get(CURLUPART_URL);
-    }
+    auto url::string() const -> http::string { return get(CURLUPART_URL); }
 
-    auto url::try_get(
-        CURLUPart what,
-        CURLUcode none,
-        unsigned int flags
-    ) const -> std::optional<http::string> {
+    auto url::try_get(CURLUPart what, CURLUcode none, unsigned int flags) const
+        -> std::optional<http::string> {
         char* part = nullptr;
         const auto code = curl_url_get(handle, what, &part, flags);
 

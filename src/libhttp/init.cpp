@@ -1,5 +1,5 @@
-#include <http/init.h>
 #include <http/error.h>
+#include <http/init.h>
 
 #include <curl/curl.h>
 
@@ -16,7 +16,5 @@ namespace http {
         }
     }
 
-    init::~init() {
-        curl_global_cleanup();
-    }
+    init::~init() { curl_global_cleanup(); }
 }

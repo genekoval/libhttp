@@ -25,8 +25,7 @@ namespace fmt {
 
 namespace http {
     session::socket::socket(curl_socket_t sockfd) :
-        event(netcore::runtime::event::create(sockfd, EPOLLIN | EPOLLOUT))
-    {}
+        event(netcore::runtime::event::create(sockfd, EPOLLIN | EPOLLOUT)) {}
 
     auto session::socket::fd() const noexcept -> curl_socket_t {
         return event->fd();
@@ -118,11 +117,8 @@ namespace http {
         return 0;
     }
 
-    auto session::timer_callback(
-        CURLM* multi,
-        long timeout_ms,
-        void* userp
-    ) -> int {
+    auto session::timer_callback(CURLM* multi, long timeout_ms, void* userp)
+        -> int {
         const auto timeout = milliseconds(timeout_ms);
         auto& client = *static_cast<http::session*>(userp);
 
@@ -139,8 +135,7 @@ namespace http {
     session::session() :
         handle(curl_multi_init()),
         timer(netcore::timer::monotonic()),
-        timer_task(manage_timer())
-    {
+        timer_task(manage_timer()) {
         if (!handle) throw client_error("failed to create curl multi handle");
 
         TIMBER_TRACE("{} created", *this);
@@ -162,8 +157,8 @@ namespace http {
         TIMBER_TRACE(
             "{} curl socket {} action",
             *this,
-            sockfd == CURL_SOCKET_TIMEOUT ?
-                "timeout" : fmt::format("({})", sockfd)
+            sockfd == CURL_SOCKET_TIMEOUT ? "timeout"
+                                          : fmt::format("({})", sockfd)
         );
 
         const auto code = curl_multi_socket_action(
@@ -173,16 +168,17 @@ namespace http {
             &running_handles
         );
 
-        if (code != CURLM_OK) throw client_error(
-            "failed to perform curl socket action: {}",
-            curl_multi_strerror(code)
-        );
+        if (code != CURLM_OK)
+            throw client_error(
+                "failed to perform curl socket action: {}",
+                curl_multi_strerror(code)
+            );
 
         TIMBER_TRACE(
             "{} curl socket {} action complete: {:L} running handle{}",
             *this,
-            sockfd == CURL_SOCKET_TIMEOUT ?
-                "timeout" : fmt::format("({})", sockfd),
+            sockfd == CURL_SOCKET_TIMEOUT ? "timeout"
+                                          : fmt::format("({})", sockfd),
             running_handles,
             running_handles == 1 ? "" : "s"
         );
@@ -196,11 +192,12 @@ namespace http {
     ) -> void {
         const auto code = curl_multi_add_handle(handle, easy_handle);
 
-        if (code != CURLM_OK) throw client_error(
-            "failed to add curl handle to client ({}): {}",
-            code,
-            curl_multi_strerror(code)
-        );
+        if (code != CURLM_OK)
+            throw client_error(
+                "failed to add curl handle to client ({}): {}",
+                code,
+                curl_multi_strerror(code)
+            );
 
         handles.insert({easy_handle, continuation});
     }
@@ -233,11 +230,8 @@ namespace http {
         );
     }
 
-    auto session::manage_socket(
-        socket socket,
-        int what,
-        bool& success
-    ) -> ext::detached_task {
+    auto session::manage_socket(socket socket, int what, bool& success)
+        -> ext::detached_task {
         if (!(success = assign(socket) && socket.update(what))) co_return;
 
         while (const auto events = co_await socket.wait()) {
@@ -252,11 +246,8 @@ namespace http {
             const auto timeout = co_await this->timeout;
 
             switch (timeout) {
-                case -1:
-                    continue;
-                case 0:
-                    co_await netcore::yield();
-                    break;
+                case -1: continue;
+                case 0: co_await netcore::yield(); break;
                 default:
                     if (!co_await timer.wait()) continue;
                     break;
@@ -308,7 +299,7 @@ namespace http {
     }
 
     auto session::remove(CURL* easy_handle) -> ext::continuation<CURLcode>& {
-        const auto code =  curl_multi_remove_handle(handle, easy_handle);
+        const auto code = curl_multi_remove_handle(handle, easy_handle);
 
         if (code != CURLM_OK) {
             TIMBER_ERROR(

@@ -2,18 +2,18 @@
 
 #include "handler.hpp"
 
-#define HTTP_METHOD(name, str) \
-    template <typename F> \
-    auto name(F&& f) -> method_router& { \
-        return this->use(str, std::forward<F>(f)); \
+#define HTTP_METHOD(name, str)                                                 \
+    template <typename F>                                                      \
+    auto name(F&& f)->method_router& {                                         \
+        return this->use(str, std::forward<F>(f));                             \
     }
 
-#define HTTP_METHOD_FN(name) \
-    template <typename F> \
-    auto name(F&& f) -> method_router { \
-        auto router = method_router(); \
-        router.name(std::forward<F>(f)); \
-        return router; \
+#define HTTP_METHOD_FN(name)                                                   \
+    template <typename F>                                                      \
+    auto name(F&& f)->method_router {                                          \
+        auto router = method_router();                                         \
+        router.name(std::forward<F>(f));                                       \
+        return router;                                                         \
     }
 
 namespace http::server {
@@ -45,11 +45,11 @@ namespace http::server {
             return *this;
         }
 
-        HTTP_METHOD(del,  "DELETE")
-        HTTP_METHOD(get,  "GET")
+        HTTP_METHOD(del, "DELETE")
+        HTTP_METHOD(get, "GET")
         HTTP_METHOD(head, "HEAD")
         HTTP_METHOD(post, "POST")
-        HTTP_METHOD(put,  "PUT")
+        HTTP_METHOD(put, "PUT")
     };
 
     template <typename F>
@@ -78,8 +78,7 @@ namespace http::server {
 
 template <>
 struct fmt::formatter<http::server::method_router> :
-    formatter<std::string_view>
-{
+    formatter<std::string_view> {
     template <typename FormatContext>
     auto format(const http::server::method_router& router, FormatContext& ctx) {
         return formatter<std::string_view>::format(router.allowed(), ctx);

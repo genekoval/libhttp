@@ -3,9 +3,8 @@
 #include <nghttp2/nghttp2.h>
 
 namespace {
-    constexpr auto next_proto_list = std::array<const unsigned char, 3> {
-        2, 'h', '2'
-    };
+    constexpr auto next_proto_list =
+        std::array<const unsigned char, 3> {2, 'h', '2'};
 
     auto alpn_select(
         SSL* ssl,

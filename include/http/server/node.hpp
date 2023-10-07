@@ -15,11 +15,7 @@ namespace http::server {
         std::unordered_map<std::string_view, std::string_view> params;
     };
 
-    enum class node_type {
-        static_route,
-        param,
-        catch_all
-    };
+    enum class node_type { static_route, param, catch_all };
 
     template <typename T>
     class node {
@@ -37,8 +33,7 @@ namespace http::server {
         ) :
             prefix(prefix),
             value(std::forward<std::optional<T>>(value)),
-            children(std::forward<std::vector<node>>(children))
-        {}
+            children(std::forward<std::vector<node>>(children)) {}
 
         auto assign(std::string_view route, T&& value) -> node& {
             auto begin = route.begin();
@@ -67,8 +62,8 @@ namespace http::server {
 
                 begin = it;
 
-                current->type = c == ':' ?
-                    node_type::param : node_type::catch_all;
+                current->type =
+                    c == ':' ? node_type::param : node_type::catch_all;
 
                 if (current->type == node_type::catch_all && it != end) {
                     throw std::runtime_error("invalid catch-all");
@@ -95,8 +90,9 @@ namespace http::server {
                 case node_type::param: {
                     const auto slash = route.find('/');
                     params.insert({prefix, route.substr(0, slash)});
-                    route = slash != std::string_view::npos ?
-                        route.substr(slash) : std::string_view();
+                    route = slash != std::string_view::npos
+                                ? route.substr(slash)
+                                : std::string_view();
                     break;
                 }
                 case node_type::catch_all:
@@ -152,26 +148,19 @@ namespace http::server {
                 std::unordered_map<std::string_view, std::string_view>();
 
             if (auto* const result = find(route, params)) {
-                return match<T> {
-                    .value = result,
-                    .params = std::move(params)
-                };
+                return match<T> {.value = result, .params = std::move(params)};
             }
 
             return std::nullopt;
         }
 
-        auto insert(node& child) -> node& {
-            return insert(std::move(child));
-        }
+        auto insert(node& child) -> node& { return insert(std::move(child)); }
 
         auto insert(node&& child) -> node& {
             auto it = children.begin();
 
-            while (
-                it != children.end() &&
-                it->type == node_type::static_route
-            ) ++it;
+            while (it != children.end() && it->type == node_type::static_route)
+                ++it;
 
             children.insert(it, std::forward<node>(child));
             return *this;
@@ -190,10 +179,8 @@ namespace http::server {
             auto* current = this;
 
             while (true) {
-                if (
-                    (route.starts_with(':') || route.starts_with('*')) &&
-                    current->type != node_type::static_route
-                ) {
+                if ((route.starts_with(':') || route.starts_with('*')) &&
+                    current->type != node_type::static_route) {
                     route = route.substr(1);
                     const auto slash = route.find('/');
 
@@ -215,10 +202,8 @@ namespace http::server {
                 }
                 else {
                     std::size_t i = 0;
-                    const auto max = std::min(
-                        route.size(),
-                        current->prefix.size()
-                    );
+                    const auto max =
+                        std::min(route.size(), current->prefix.size());
 
                     while (i < max && route[i] == current->prefix[i]) ++i;
 
@@ -255,12 +240,9 @@ namespace http::server {
                 auto found = false;
                 const auto first = route[0];
                 for (auto& child : current->children) {
-                    if (
-                        (
-                            (first == ':' || first == '*') &&
-                            child.type != node_type::static_route
-                        ) || (child.prefix[0] == first)
-                    ) {
+                    if (((first == ':' || first == '*') &&
+                         child.type != node_type::static_route) ||
+                        (child.prefix[0] == first)) {
                         current = &child;
                         found = true;
                         break;
@@ -280,10 +262,9 @@ namespace http::server {
                 }
                 else {
                     auto it = current->children.begin();
-                    while (
-                        it != current->children.end() &&
-                        it->type == node_type::static_route
-                    ) ++it;
+                    while (it != current->children.end() &&
+                           it->type == node_type::static_route)
+                        ++it;
                     auto inserted =
                         current->children.insert(it, std::move(child));
                     if (!nested) return *inserted;

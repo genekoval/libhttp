@@ -4,8 +4,7 @@ namespace http::server::extractor {
     stream::stream(server::request& request) : request(&request) {}
 
     stream::stream(stream&& other) :
-        request(std::exchange(other.request, nullptr))
-    {}
+        request(std::exchange(other.request, nullptr)) {}
 
     stream::~stream() {
         if (!request) return;

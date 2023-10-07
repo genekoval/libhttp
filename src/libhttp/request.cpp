@@ -25,8 +25,7 @@ namespace http {
         body(std::exchange(other.body, {})),
         response_data(std::move(other.response_data)),
         method(std::exchange(other.method, "GET")),
-        url(std::move(other.url))
-    {}
+        url(std::move(other.url)) {}
 
     request::~request() {
         curl_easy_cleanup(handle);
@@ -62,10 +61,8 @@ namespace http {
         set(CURLOPT_FOLLOWLOCATION, enable);
     }
 
-    auto request::open(
-        const std::filesystem::path& path,
-        const char* mode
-    ) const -> file {
+    auto request::open(const std::filesystem::path& path, const char* mode)
+        const -> file {
         if (auto stream = file_stream(std::fopen(path.c_str(), mode))) {
             TIMBER_DEBUG(
                 R"({} opened file stream ({}) for "{}")",
@@ -76,20 +73,14 @@ namespace http {
 
             return file {
                 .stream = std::move(stream),
-                .size = fs::file_size(path)
-            };
+                .size = fs::file_size(path)};
         }
 
-        TIMBER_DEBUG(
-            R"({} failed to open file "{}")",
-            *this,
-            path.native()
-        );
+        TIMBER_DEBUG(R"({} failed to open file "{}")", *this, path.native());
 
-        throw ext::system_error(fmt::format(
-            R"(Failed to open file "{}")",
-            path.native()
-        ));
+        throw ext::system_error(
+            fmt::format(R"(Failed to open file "{}")", path.native())
+        );
     }
 
     auto request::perform() -> http::response {
@@ -139,48 +130,50 @@ namespace http {
         set(CURLOPT_CURLU, url.data());
         set(CURLOPT_HTTPHEADER, headers);
 
-        std::visit(overloaded {
-            [this](std::monostate) {
-                if (method == "HEAD") set(CURLOPT_NOBODY, 1L);
-                else set(CURLOPT_HTTPGET, 1L);
-            },
-            [this](std::string_view string) {
-                set(CURLOPT_POST, 1L);
-                set(CURLOPT_POSTFIELDS, string.data());
-                set(CURLOPT_POSTFIELDSIZE_LARGE, string.size());
-            },
-            [this](const file& file) {
-                set(CURLOPT_UPLOAD, 1L);
-                set(CURLOPT_INFILESIZE_LARGE, file.size);
-                set(CURLOPT_READFUNCTION, nullptr);
-                set(CURLOPT_READDATA, file.stream.get());
-            }
-        }, body);
+        std::visit(
+            overloaded {
+                [this](std::monostate) {
+                    if (method == "HEAD") set(CURLOPT_NOBODY, 1L);
+                    else set(CURLOPT_HTTPGET, 1L);
+                },
+                [this](std::string_view string) {
+                    set(CURLOPT_POST, 1L);
+                    set(CURLOPT_POSTFIELDS, string.data());
+                    set(CURLOPT_POSTFIELDSIZE_LARGE, string.size());
+                },
+                [this](const file& file) {
+                    set(CURLOPT_UPLOAD, 1L);
+                    set(CURLOPT_INFILESIZE_LARGE, file.size);
+                    set(CURLOPT_READFUNCTION, nullptr);
+                    set(CURLOPT_READDATA, file.stream.get());
+                }},
+            body
+        );
 
-        std::visit(overloaded {
-            [this](const std::string& string) {
-                set(CURLOPT_WRITEFUNCTION, write_string);
-                set(CURLOPT_WRITEDATA, &string);
-            },
-            [this](const file& file) {
-                set(CURLOPT_WRITEFUNCTION, nullptr);
-                set(CURLOPT_WRITEDATA, file.stream.get());
-            },
-            [this](FILE* file) {
-                set(CURLOPT_WRITEFUNCTION, nullptr);
-                set(CURLOPT_WRITEDATA, file);
-            },
-            [this](const http::stream& stream) {
-                set(CURLOPT_WRITEFUNCTION, write_stream);
-                set(CURLOPT_WRITEDATA, &stream);
-            }
-        }, response_data);
+        std::visit(
+            overloaded {
+                [this](const std::string& string) {
+                    set(CURLOPT_WRITEFUNCTION, write_string);
+                    set(CURLOPT_WRITEDATA, &string);
+                },
+                [this](const file& file) {
+                    set(CURLOPT_WRITEFUNCTION, nullptr);
+                    set(CURLOPT_WRITEDATA, file.stream.get());
+                },
+                [this](FILE* file) {
+                    set(CURLOPT_WRITEFUNCTION, nullptr);
+                    set(CURLOPT_WRITEDATA, file);
+                },
+                [this](const http::stream& stream) {
+                    set(CURLOPT_WRITEFUNCTION, write_stream);
+                    set(CURLOPT_WRITEDATA, &stream);
+                }},
+            response_data
+        );
     }
 
-    auto request::post_perform(
-        CURLcode code,
-        std::exception_ptr exception
-    ) -> http::response {
+    auto request::post_perform(CURLcode code, std::exception_ptr exception)
+        -> http::response {
         const auto deferred = ext::scope_exit([this] { response_data = {}; });
 
         body = {};
@@ -208,9 +201,7 @@ namespace http {
         return response_data.emplace<stream>(handle);
     }
 
-    auto request::pipe(FILE* file) -> void {
-        response_data = file;
-    }
+    auto request::pipe(FILE* file) -> void { response_data = file; }
 
     auto request::upload(const fs::path& file) -> void {
         body = open(file, "r");
@@ -238,8 +229,7 @@ namespace http {
 
             stream.write(std::span<std::byte> {
                 reinterpret_cast<std::byte*>(ptr),
-                real_size
-            });
+                real_size});
 
             if (stream.awaiting()) return real_size;
         }

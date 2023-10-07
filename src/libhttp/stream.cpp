@@ -12,8 +12,7 @@ namespace http {
         coroutine(std::exchange(other.coroutine, nullptr)),
         data(std::exchange(other.data, {})),
         eof(std::exchange(other.eof, false)),
-        paused(std::exchange(other.paused, false))
-    {}
+        paused(std::exchange(other.paused, false)) {}
 
     stream::~stream() {
         eof = true;
@@ -35,13 +34,10 @@ namespace http {
         return coroutine != nullptr;
     }
 
-    auto stream::await_ready() const noexcept -> bool {
-        return eof;
-    }
+    auto stream::await_ready() const noexcept -> bool { return eof; }
 
-    auto stream::await_suspend(
-        std::coroutine_handle<> coroutine
-    ) noexcept -> void {
+    auto stream::await_suspend(std::coroutine_handle<> coroutine) noexcept
+        -> void {
         this->coroutine = coroutine;
 
         if (paused) {
@@ -85,16 +81,14 @@ namespace http {
     readable_stream::readable_stream(stream& source) : source(&source) {}
 
     readable_stream::readable_stream(readable_stream&& other) :
-        source(std::exchange(other.source, nullptr))
-    {}
+        source(std::exchange(other.source, nullptr)) {}
 
     readable_stream::~readable_stream() {
         if (source) source->close();
     }
 
-    auto readable_stream::operator=(
-        readable_stream&& other
-    ) -> readable_stream& {
+    auto readable_stream::operator=(readable_stream&& other)
+        -> readable_stream& {
         source = std::exchange(other.source, nullptr);
         return *this;
     }

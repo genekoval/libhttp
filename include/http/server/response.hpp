@@ -21,10 +21,9 @@ namespace http::server {
 
     template <typename T>
     concept response_data = requires(response& res, T&& t) {
-        { response_type<std::remove_cvref_t<T>>::send(
-            res,
-            std::forward<T>(t)
-        ) } -> std::same_as<void>;
+        {
+            response_type<std::remove_cvref_t<T>>::send(res, std::forward<T>(t))
+        } -> std::same_as<void>;
     };
 
     struct response {

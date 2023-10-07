@@ -35,17 +35,14 @@ namespace http {
             void* socketp
         ) -> int;
 
-        static auto timer_callback(
-            CURLM* multi,
-            long timeout_ms,
-            void* userp
-        ) -> int;
+        static auto timer_callback(CURLM* multi, long timeout_ms, void* userp)
+            -> int;
 
         CURLM* handle;
         std::unordered_map<
             CURL*,
-            std::reference_wrapper<ext::continuation<CURLcode>>
-        > handles;
+            std::reference_wrapper<ext::continuation<CURLcode>>>
+            handles;
         int running_handles = 0;
         netcore::timer timer;
         ext::continuation<long> timeout;
@@ -53,21 +50,16 @@ namespace http {
 
         auto action(curl_socket_t sockfd, int ev_bitmask = 0) -> void;
 
-        auto add(
-            CURL* easy_handle,
-            ext::continuation<CURLcode>& continuation
-        ) -> void;
+        auto add(CURL* easy_handle, ext::continuation<CURLcode>& continuation)
+            -> void;
 
         [[nodiscard]]
         auto assign(socket& sock) -> bool;
 
         auto cleanup() const noexcept -> void;
 
-        auto manage_socket(
-            socket socket,
-            int what,
-            bool& success
-        ) -> ext::detached_task;
+        auto manage_socket(socket socket, int what, bool& success)
+            -> ext::detached_task;
 
         auto manage_timer() -> ext::jtask<>;
 
@@ -78,11 +70,12 @@ namespace http {
         auto set(CURLMoption option, auto value) -> void {
             const auto code = curl_multi_setopt(handle, option, value);
 
-            if (code != CURLM_OK) throw client_error(
-                "failed to set curl option ({}): {}",
-                option,
-                curl_multi_strerror(code)
-            );
+            if (code != CURLM_OK)
+                throw client_error(
+                    "failed to set curl option ({}): {}",
+                    option,
+                    curl_multi_strerror(code)
+                );
         }
     public:
         session();
@@ -111,7 +104,11 @@ namespace fmt {
 
         template <typename FormatContext>
         auto format(const http::session& session, FormatContext& ctx) {
-            return fmt::format_to(ctx.out(), "session ({})", ptr(session.handle));
+            return fmt::format_to(
+                ctx.out(),
+                "session ({})",
+                ptr(session.handle)
+            );
         }
     };
 }

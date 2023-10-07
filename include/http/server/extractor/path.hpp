@@ -12,7 +12,6 @@ namespace http::server::extractor {
             detail::mapped_type<T>(
                 Name.str(),
                 request.path_param<T>(Name.str())
-            )
-        {}
+            ) {}
     };
 }

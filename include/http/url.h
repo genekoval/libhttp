@@ -16,11 +16,8 @@ namespace http {
 
         auto get(CURLUPart what, unsigned int flags = 0) const -> http::string;
 
-        auto set(
-            CURLUPart part,
-            const char* content,
-            unsigned int flags = 0
-        ) -> void;
+        auto set(CURLUPart part, const char* content, unsigned int flags = 0)
+            -> void;
 
         auto set(
             CURLUPart part,
@@ -28,11 +25,8 @@ namespace http {
             unsigned int flags = 0
         ) -> void;
 
-        auto try_get(
-            CURLUPart what,
-            CURLUcode none,
-            unsigned int flags = 0
-        ) const -> std::optional<http::string>;
+        auto try_get(CURLUPart what, CURLUcode none, unsigned int flags = 0)
+            const -> std::optional<http::string>;
     public:
         url();
 
@@ -75,11 +69,9 @@ namespace http {
         auto path(std::string_view value) -> void;
 
         template <typename... Args>
-        requires (sizeof...(Args) > 0)
-        auto path(
-            fmt::format_string<Args...> format_string,
-            Args&&... args
-        ) -> void {
+        requires(sizeof...(Args) > 0)
+        auto path(fmt::format_string<Args...> format_string, Args&&... args)
+            -> void {
             path(fmt::format(format_string, std::forward<Args>(args)...));
         }
 
@@ -104,11 +96,9 @@ namespace http {
 
         template <typename T>
         auto query(std::string_view key, const T& value) -> void {
-            set(
-                CURLUPART_QUERY,
+            set(CURLUPART_QUERY,
                 fmt::format("{}={}", key, value),
-                CURLU_APPENDQUERY
-            );
+                CURLU_APPENDQUERY);
         }
 
         auto scheme() const -> std::optional<http::string>;

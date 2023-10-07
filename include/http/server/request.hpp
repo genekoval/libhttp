@@ -29,9 +29,7 @@ namespace http::server {
 
             auto key = key_type();
 
-            if constexpr (
-                std::same_as<key_type, std::string_view>
-            ) key = name;
+            if constexpr (std::same_as<key_type, std::string_view>) key = name;
             else key = std::string(name);
 
             const auto result = map.find(key);

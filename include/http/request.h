@@ -35,17 +35,13 @@ namespace http {
         std::variant<std::monostate, std::string, std::string_view, file> body;
         std::variant<std::string, file, FILE*, http::stream> response_data;
 
-        auto open(
-            const std::filesystem::path& path,
-            const char* mode
-        ) const -> file;
+        auto open(const std::filesystem::path& path, const char* mode) const
+            -> file;
 
         auto pre_perform() -> void;
 
-        auto post_perform(
-            CURLcode code,
-            std::exception_ptr exception
-        ) -> http::response;
+        auto post_perform(CURLcode code, std::exception_ptr exception)
+            -> http::response;
 
         template <typename T>
         auto set(CURLoption option, T t) -> void {
@@ -115,7 +111,11 @@ namespace fmt {
 
         template <typename FormatContext>
         auto format(const http::request& request, FormatContext& ctx) {
-            return fmt::format_to(ctx.out(), "request ({})", ptr(request.handle));
+            return fmt::format_to(
+                ctx.out(),
+                "request ({})",
+                ptr(request.handle)
+            );
         }
     };
 }

@@ -32,13 +32,12 @@ namespace http {
 
         auto content_type() const -> std::optional<media_type>;
 
-        auto data() const & noexcept -> std::string_view;
+        auto data() const& noexcept -> std::string_view;
 
         auto data() && noexcept -> std::string;
 
-        auto header(
-            std::string_view name
-        ) const -> std::optional<std::string_view>;
+        auto header(std::string_view name) const
+            -> std::optional<std::string_view>;
 
         auto ok() const noexcept -> bool;
 

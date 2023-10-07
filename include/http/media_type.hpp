@@ -10,6 +10,7 @@
 namespace http {
     class media_type {
         using size_type = std::uint16_t;
+
         enum { max_size = std::numeric_limits<size_type>::max() };
 
         std::string storage;
@@ -28,12 +29,10 @@ namespace http {
                 std::string_view value
             ) :
                 name(name),
-                value(value)
-            {}
+                value(value) {}
 
-            constexpr auto operator==(
-                const name_value& other
-            ) const noexcept -> bool = default;
+            constexpr auto operator==(const name_value& other) const noexcept
+                -> bool = default;
         };
 
         constexpr media_type() = default;
@@ -73,10 +72,8 @@ namespace fmt {
     template <>
     struct formatter<http::media_type> : formatter<std::string_view> {
         template <typename FormatContext>
-        constexpr auto format(
-            const http::media_type& media,
-            FormatContext& ctx
-        ) const {
+        constexpr auto format(const http::media_type& media, FormatContext& ctx)
+            const {
             return formatter<std::string_view>::format(media.str(), ctx);
         }
     };

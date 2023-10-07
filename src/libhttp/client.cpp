@@ -7,45 +7,32 @@ namespace fs = std::filesystem;
 namespace http {
     client::client(std::string_view base_url) :
         base_url(base_url),
-        session(nullptr)
-    {}
+        session(nullptr) {}
 
     client::client(std::string_view base_url, http::session& session) :
         base_url(base_url),
-        session(&session)
-    {}
+        session(&session) {}
 
-    auto client::del() const -> request {
-        return method("DELETE");
-    }
+    auto client::del() const -> request { return method("DELETE"); }
 
-    auto client::get() const -> request {
-        return method("GET");
-    }
+    auto client::get() const -> request { return method("GET"); }
 
-    auto client::head() const -> request {
-        return method("HEAD");
-    }
+    auto client::head() const -> request { return method("HEAD"); }
 
     auto client::method(std::string_view method) const -> request {
         return request(method, base_url, session);
     }
 
-    auto client::post() const -> request {
-        return method("POST");
-    }
+    auto client::post() const -> request { return method("POST"); }
 
-    auto client::put() const -> request {
-        return method("PUT");
-    }
+    auto client::put() const -> request { return method("PUT"); }
 
     client::request::request(
         std::string_view method,
         const url& base_url,
         http::session* session
     ) :
-        session(session)
-    {
+        session(session) {
         req.method = method;
         req.url = base_url;
     }
@@ -91,9 +78,8 @@ namespace http {
         throw error_code(res.status(), read_error_file(location));
     }
 
-    auto client::request::download_task(
-        const std::filesystem::path& location
-    ) -> ext::task<> {
+    auto client::request::download_task(const std::filesystem::path& location)
+        -> ext::task<> {
         req.download(location);
 
         const auto res = co_await req.perform(*session);
@@ -120,9 +106,8 @@ namespace http {
         throw error_code(res.status(), "Response piped to stream");
     }
 
-    auto client::request::read_error_file(
-        const std::filesystem::path& path
-    ) -> std::string {
+    auto client::request::read_error_file(const std::filesystem::path& path)
+        -> std::string {
         auto contents = std::string();
         auto stream = std::ifstream(path, std::ios::in | std::ios::binary);
 

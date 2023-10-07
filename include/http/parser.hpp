@@ -45,13 +45,10 @@ namespace http {
             if (string.size() == 1) {
                 switch (string[0]) {
                     case 't':
-                    case 'y':
-                        return true;
+                    case 'y': return true;
                     case 'f':
-                    case 'n':
-                        return false;
-                    default:
-                        break;
+                    case 'n': return false;
+                    default: break;
                 }
             }
             else if (string == "true" || string == "yes") return true;
@@ -117,9 +114,8 @@ namespace http {
 
     template <typename Rep, typename Period>
     struct parser<std::chrono::duration<Rep, Period>> {
-        static auto parse(
-            std::string_view string
-        ) -> std::chrono::duration<Rep, Period> {
+        static auto parse(std::string_view string)
+            -> std::chrono::duration<Rep, Period> {
             const auto value = parser<Rep>::parse(string);
             return std::chrono::duration<Rep, Period>(value);
         }

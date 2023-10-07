@@ -36,9 +36,7 @@ namespace http {
 
         auto await_ready() const noexcept -> bool;
 
-        auto await_suspend(
-            std::coroutine_handle<> coroutine
-        ) noexcept -> void;
+        auto await_suspend(std::coroutine_handle<> coroutine) noexcept -> void;
 
         auto await_resume() noexcept -> std::span<std::byte>;
 
@@ -84,7 +82,11 @@ namespace fmt {
 
         template <typename FormatContext>
         auto format(const http::stream& stream, FormatContext& ctx) {
-            return fmt::format_to(ctx.out(), "request ({})", ptr(stream.handle));
+            return fmt::format_to(
+                ctx.out(),
+                "request ({})",
+                ptr(stream.handle)
+            );
         }
     };
 }

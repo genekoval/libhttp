@@ -15,8 +15,7 @@ namespace {
             .value = (std::uint8_t*) value.data(),
             .namelen = name.size(),
             .valuelen = value.size(),
-            .flags = flags
-        };
+            .flags = flags};
     }
 
     auto data_source_read_callback(
@@ -30,61 +29,55 @@ namespace {
     ) -> ssize_t {
         auto& res = *reinterpret_cast<http::server::response*>(source->ptr);
 
-        return std::visit([&] <typename T> (const T& t) -> ssize_t {
-            ssize_t written = 0;
+        return std::visit(
+            [&]<typename T>(const T& t) -> ssize_t {
+                ssize_t written = 0;
 
-            if constexpr (std::same_as<T, std::string>) {
-                const auto max = std::min(
-                    t.size() - res.written,
-                    length
-                );
+                if constexpr (std::same_as<T, std::string>) {
+                    const auto max = std::min(t.size() - res.written, length);
 
-                written = t.copy(
-                    reinterpret_cast<char*>(buf),
-                    max,
-                    res.written
-                );
+                    written =
+                        t.copy(reinterpret_cast<char*>(buf), max, res.written);
 
-                res.written += written;
+                    res.written += written;
 
-                if (res.written == t.size()) {
-                    *data_flags |= NGHTTP2_DATA_FLAG_EOF;
+                    if (res.written == t.size()) {
+                        *data_flags |= NGHTTP2_DATA_FLAG_EOF;
+                    }
                 }
-            }
-            else if constexpr (std::same_as<T, http::server::file>) {
-                const auto max = std::min(
-                    t.size - res.written,
-                    length
-                );
+                else if constexpr (std::same_as<T, http::server::file>) {
+                    const auto max = std::min(t.size - res.written, length);
 
-                const auto ret = read(t.fd, buf, max);
-                if (ret == -1) {
-                    TIMBER_ERROR(
-                        "Reading from fd ({}) failed: {}",
+                    const auto ret = read(t.fd, buf, max);
+                    if (ret == -1) {
+                        TIMBER_ERROR(
+                            "Reading from fd ({}) failed: {}",
+                            t.fd,
+                            strerror(errno)
+                        );
+                        return NGHTTP2_ERR_TEMPORAL_CALLBACK_FAILURE;
+                    }
+
+                    written = ret;
+                    res.written += ret;
+
+                    TIMBER_TRACE(
+                        "fd ({}) read {:L} byte{} ({:L} remaining)",
                         t.fd,
-                        strerror(errno)
+                        ret,
+                        ret == 1 ? "" : "s",
+                        t.size - res.written
                     );
-                    return NGHTTP2_ERR_TEMPORAL_CALLBACK_FAILURE;
+
+                    if (res.written == t.size) {
+                        *data_flags |= NGHTTP2_DATA_FLAG_EOF;
+                    }
                 }
 
-                written = ret;
-                res.written += ret;
-
-                TIMBER_TRACE(
-                    "fd ({}) read {:L} byte{} ({:L} remaining)",
-                    t.fd,
-                    ret,
-                    ret == 1 ? "" : "s",
-                    t.size - res.written
-                );
-
-                if (res.written == t.size) {
-                    *data_flags |= NGHTTP2_DATA_FLAG_EOF;
-                }
-            }
-
-            return written;
-        }, res.data);
+                return written;
+            },
+            res.data
+        );
     }
 
     auto on_begin_headers_callback(
@@ -92,10 +85,9 @@ namespace {
         const nghttp2_frame* frame,
         void* user_data
     ) -> int {
-        if (
-            frame->hd.type != NGHTTP2_HEADERS ||
-            frame->headers.cat != NGHTTP2_HCAT_REQUEST
-        ) return 0;
+        if (frame->hd.type != NGHTTP2_HEADERS ||
+            frame->headers.cat != NGHTTP2_HCAT_REQUEST)
+            return 0;
 
         auto& session = *reinterpret_cast<http::server::session*>(user_data);
         auto& stream = session.make_stream(frame->hd.stream_id);
@@ -115,7 +107,7 @@ namespace {
         std::int32_t stream_id,
         const std::uint8_t* data,
         size_t len,
-        void *user_data
+        void* user_data
     ) -> int {
         auto& stream = *reinterpret_cast<http::server::stream*>(
             nghttp2_session_get_stream_user_data(handle, stream_id)
@@ -172,20 +164,21 @@ namespace {
                 if (frame->headers.cat != NGHTTP2_HCAT_REQUEST) break;
 
                 if (auto* stream = reinterpret_cast<http::server::stream*>(
-                    nghttp2_session_get_stream_user_data(
-                        handle,
-                        frame->hd.stream_id
-                    )
-                )) stream->recv_header(
-                    std::string_view(
-                        reinterpret_cast<const char*>(name),
-                        namelen
-                    ),
-                    std::string_view(
-                        reinterpret_cast<const char*>(value),
-                        valuelen
-                    )
-                );
+                        nghttp2_session_get_stream_user_data(
+                            handle,
+                            frame->hd.stream_id
+                        )
+                    ))
+                    stream->recv_header(
+                        std::string_view(
+                            reinterpret_cast<const char*>(name),
+                            namelen
+                        ),
+                        std::string_view(
+                            reinterpret_cast<const char*>(value),
+                            valuelen
+                        )
+                    );
                 break;
             }
         }
@@ -242,14 +235,8 @@ namespace {
     ) -> int {
         TIMBER_DEBUG(
             "Received invalid header ({}: {})",
-            std::string_view(
-                reinterpret_cast<const char*>(name),
-                namelen
-            ),
-            std::string_view(
-                reinterpret_cast<const char*>(value),
-                valuelen
-            )
+            std::string_view(reinterpret_cast<const char*>(name), namelen),
+            std::string_view(reinterpret_cast<const char*>(value), valuelen)
         );
 
         return 0;
@@ -264,8 +251,8 @@ namespace {
         TIMBER_FUNC();
 
         if (auto* stream = reinterpret_cast<http::server::stream*>(
-            nghttp2_session_get_stream_user_data(handle, stream_id)
-        )) {
+                nghttp2_session_get_stream_user_data(handle, stream_id)
+            )) {
             if (stream->active) stream->open = false;
             else delete stream;
         }
@@ -281,8 +268,7 @@ namespace http::server {
         server::router& router
     ) :
         socket(std::forward<netcore::ssl::socket>(socket), buffer_size),
-        router(&router)
-    {
+        router(&router) {
         nghttp2_session_callbacks* callbacks = nullptr;
         nghttp2_session_callbacks_new(&callbacks);
 
@@ -327,9 +313,7 @@ namespace http::server {
         streams.delete_all();
         nghttp2_session_del(handle);
 
-        if (handle) {
-            TIMBER_TRACE("{} destroyed", *this);
-        }
+        if (handle) { TIMBER_TRACE("{} destroyed", *this); }
     }
 
     auto session::await_close() -> ext::task<> {
@@ -381,8 +365,7 @@ namespace http::server {
                 case std::errc::connection_reset:
                     TIMBER_LOG(lvl, ex.what());
                     break;
-                default:
-                    TIMBER_ERROR(ex.what());
+                default: TIMBER_ERROR(ex.what());
             }
         }
         catch (const std::exception& ex) {
@@ -412,9 +395,7 @@ namespace http::server {
         if (!stream.open) delete &stream;
     }
 
-    auto session::idle() const noexcept -> bool {
-        return streams.empty();
-    }
+    auto session::idle() const noexcept -> bool { return streams.empty(); }
 
     auto session::link(session& other) noexcept -> void {
         other.next = this;
@@ -436,10 +417,7 @@ namespace http::server {
         auto bytes = std::span<const std::byte>();
 
         do {
-            auto result = co_await ext::race(
-                socket.read(),
-                await_close()
-            );
+            auto result = co_await ext::race(socket.read(), await_close());
 
             if (result.index() == 1) {
                 TIMBER_TRACE("{} closing", *this);
@@ -483,19 +461,19 @@ namespace http::server {
         }
 
         auto provider = nghttp2_data_provider {
-            .source = {
-                .ptr = &res,
-            },
-            .read_callback = data_source_read_callback
-        };
+            .source =
+                {
+                    .ptr = &res,
+                },
+            .read_callback = data_source_read_callback};
 
         const auto rv = nghttp2_submit_response(
             handle,
             stream.id,
             headers.data(),
             headers.size(),
-            std::holds_alternative<std::monostate>(res.data) ?
-                nullptr : &provider
+            std::holds_alternative<std::monostate>(res.data) ? nullptr
+                                                             : &provider
         );
 
         if (rv != 0) throw std::runtime_error(nghttp2_strerror(rv));
@@ -503,12 +481,9 @@ namespace http::server {
     }
 
     auto session::send_server_connection_header() -> void {
-        auto settings = std::array {
-            nghttp2_settings_entry {
-                NGHTTP2_SETTINGS_MAX_CONCURRENT_STREAMS,
-                100
-            }
-        };
+        auto settings = std::array {nghttp2_settings_entry {
+            NGHTTP2_SETTINGS_MAX_CONCURRENT_STREAMS,
+            100}};
 
         const auto rv = nghttp2_submit_settings(
             handle,
@@ -528,9 +503,9 @@ namespace http::server {
 
             while (const auto length = nghttp2_session_mem_send(handle, &src)) {
                 if (length < 0) {
-                    closed.resume(std::make_exception_ptr(std::runtime_error(
-                        nghttp2_strerror(length)
-                    )));
+                    closed.resume(std::make_exception_ptr(
+                        std::runtime_error(nghttp2_strerror(length))
+                    ));
 
                     co_return;
                 }

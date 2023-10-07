@@ -22,15 +22,11 @@ namespace http::server {
         }
 
         template <typename Args, std::size_t... I>
-        auto extract(
-            request& request,
-            std::index_sequence<I...>
-        ) -> ext::task<Args> {
+        auto extract(request& request, std::index_sequence<I...>)
+            -> ext::task<Args> {
             co_return Args {
-                co_await make_extractor<std::tuple_element_t<I, Args>>(
-                    request
-                )...
-            };
+                co_await make_extractor<std::tuple_element_t<I, Args>>(request
+                )...};
         }
 
         template <typename... Args>
@@ -42,43 +38,33 @@ namespace http::server {
         }
 
         template <typename... Args>
-        auto use(
-            stream& stream,
-            std::function<void(Args...)>& fn
-        ) -> ext::task<> {
+        auto use(stream& stream, std::function<void(Args...)>& fn)
+            -> ext::task<> {
             std::apply(fn, co_await extract<Args...>(stream.request));
             co_return;
         }
 
         template <response_data R, typename... Args>
-        auto use(
-            stream& stream,
-            std::function<R(Args...)>& fn
-        ) -> ext::task<> {
-            stream.response.send(std::apply(
-                fn,
-                co_await extract<Args...>(stream.request)
-            ));
+        auto use(stream& stream, std::function<R(Args...)>& fn) -> ext::task<> {
+            stream.response.send(
+                std::apply(fn, co_await extract<Args...>(stream.request))
+            );
             co_return;
         }
 
         template <typename... Args>
-        auto use(
-            stream& stream,
-            std::function<ext::task<>(Args...)>& fn
-        ) -> ext::task<> {
+        auto use(stream& stream, std::function<ext::task<>(Args...)>& fn)
+            -> ext::task<> {
             co_await std::apply(fn, co_await extract<Args...>(stream.request));
         }
 
         template <response_data R, typename... Args>
-        auto use(
-            stream& stream,
-            std::function<ext::task<R>(Args...)>& fn
-        ) -> ext::task<> {
+        auto use(stream& stream, std::function<ext::task<R>(Args...)>& fn)
+            -> ext::task<> {
             stream.response.send(co_await std::apply(
                 fn,
-                co_await extract<Args...>(stream.request))
-            );
+                co_await extract<Args...>(stream.request)
+            ));
         }
 
         template <typename R, typename... Args>

@@ -10,9 +10,7 @@ namespace http {
 
     string::string(string&& other) : str(std::exchange(other.str, nullptr)) {}
 
-    string::~string() {
-        curl_free(str);
-    }
+    string::~string() { curl_free(str); }
 
     string::operator std::string_view() const noexcept {
         return std::string_view(str);
@@ -27,7 +25,5 @@ namespace http {
         return *this;
     }
 
-    auto string::data() const noexcept -> const char* {
-        return str;
-    }
+    auto string::data() const noexcept -> const char* { return str; }
 }

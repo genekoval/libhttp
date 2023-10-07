@@ -1,8 +1,8 @@
 #pragma once
 
-#include "session.hpp"
 #include "json.hpp"
 #include "request.h"
+#include "session.hpp"
 
 namespace http {
     class client final {
@@ -13,9 +13,8 @@ namespace http {
             http::request req;
             http::session* const session;
 
-            auto read_error_file(
-                const std::filesystem::path& path
-            ) -> std::string;
+            auto read_error_file(const std::filesystem::path& path)
+                -> std::string;
         public:
             request(
                 std::string_view method,
@@ -27,25 +26,22 @@ namespace http {
 
             auto data(
                 std::string&& data,
-                std::optional<std::reference_wrapper<
-                    const media_type
-                >> content_type
+                std::optional<std::reference_wrapper<const media_type>>
+                    content_type
             ) -> request&;
 
             auto data_view(
                 std::string_view data,
-                std::optional<std::reference_wrapper<
-                    const media_type
-                >> content_type
+                std::optional<std::reference_wrapper<const media_type>>
+                    content_type
             ) -> request&;
 
             auto data_task() -> ext::task<std::string>;
 
             auto download(const std::filesystem::path& location) -> void;
 
-            auto download_task(
-                const std::filesystem::path& location
-            ) -> ext::task<>;
+            auto download_task(const std::filesystem::path& location)
+                -> ext::task<>;
 
             template <typename T>
             auto header(std::string_view name, const T& value) -> request& {
@@ -71,8 +67,7 @@ namespace http {
 
             template <typename... Components>
             auto path(Components&&... components) -> request& {
-                req.url.path_components(
-                    std::forward<Components>(components)...
+                req.url.path_components(std::forward<Components>(components)...
                 );
 
                 return *this;
@@ -133,7 +128,7 @@ namespace http {
         auto del() const -> request;
 
         template <typename... Path>
-        requires (sizeof...(Path) > 0)
+        requires(sizeof...(Path) > 0)
         auto del(Path&&... path) const -> request {
             auto req = del();
             req.path(std::forward<Path>(path)...);
@@ -143,7 +138,7 @@ namespace http {
         auto get() const -> request;
 
         template <typename... Path>
-        requires (sizeof...(Path) > 0)
+        requires(sizeof...(Path) > 0)
         auto get(Path&&... path) const -> request {
             auto req = get();
             req.path(std::forward<Path>(path)...);
@@ -153,7 +148,7 @@ namespace http {
         auto head() const -> request;
 
         template <typename... Path>
-        requires (sizeof...(Path) > 0)
+        requires(sizeof...(Path) > 0)
         auto head(Path&&... path) const -> request {
             auto req = head();
             req.path(std::forward<Path>(path)...);
@@ -165,7 +160,7 @@ namespace http {
         auto post() const -> request;
 
         template <typename... Path>
-        requires (sizeof...(Path) > 0)
+        requires(sizeof...(Path) > 0)
         auto post(Path&&... path) const -> request {
             auto req = post();
             req.path(std::forward<Path>(path)...);
@@ -175,7 +170,7 @@ namespace http {
         auto put() const -> request;
 
         template <typename... Path>
-        requires (sizeof...(Path) > 0)
+        requires(sizeof...(Path) > 0)
         auto put(Path&&... path) const -> request {
             auto req = put();
             req.path(std::forward<Path>(path)...);
