@@ -13,8 +13,26 @@ namespace http {
             http::request req;
             http::session* const session;
 
+            template <typename T>
+            auto decode(response&& res) -> T {
+                res.check_status();
+
+                const auto content_type = res.content_type();
+                if (!content_type) throw error("Missing 'Content-Type' header");
+
+                if constexpr (std::convertible_to<http::json, T>) {
+                    if (*content_type == media::json()) {
+                        return json::parse(std::move(res).data());
+                    }
+                }
+
+                throw error("Unsupported content type '{}'", *content_type);
+            }
+
             auto read_error_file(const std::filesystem::path& path)
                 -> std::string;
+
+            auto text(response&& res) -> std::string;
         public:
             request(
                 std::string_view method,
@@ -30,13 +48,13 @@ namespace http {
                     content_type
             ) -> request&;
 
+            auto data_async() -> ext::task<std::string>;
+
             auto data_view(
                 std::string_view data,
                 std::optional<std::reference_wrapper<const media_type>>
                     content_type
             ) -> request&;
-
-            auto data_task() -> ext::task<std::string>;
 
             auto download(const std::filesystem::path& location) -> void;
 
@@ -49,22 +67,6 @@ namespace http {
                 return *this;
             }
 
-            template <typename R>
-            auto json() -> R {
-                const auto res = req.perform();
-
-                if (res.ok()) return json::parse(res.data());
-                throw error_code(res.status(), res.data());
-            }
-
-            template <typename R>
-            auto json_task() -> ext::task<R> {
-                const auto res = co_await req.perform(*session);
-
-                if (res.ok()) co_return json::parse(res.data());
-                throw error_code(res.status(), res.data());
-            }
-
             template <typename... Components>
             auto path(Components&&... components) -> request& {
                 req.url.path_components(std::forward<Components>(components)...
@@ -75,7 +77,7 @@ namespace http {
 
             auto pipe(FILE* file) -> void;
 
-            auto pipe_task(FILE* file) -> ext::task<>;
+            auto pipe_async(FILE* file) -> ext::task<>;
 
             template <typename Query>
             auto query(std::string_view name, Query&& value) -> request& {
@@ -83,9 +85,27 @@ namespace http {
                 return *this;
             }
 
-            auto send() -> void;
+            template <typename T = void>
+            auto send() -> T {
+                return decode<T>(req.perform());
+            }
 
-            auto send_task() -> ext::task<>;
+            template <typename T = void>
+            auto send_async() -> ext::task<T> {
+                co_return decode<T>(co_await req.perform(*session));
+            }
+
+            template <>
+            auto send<void>() -> void;
+
+            template <>
+            auto send_async<void>() -> ext::task<>;
+
+            template <>
+            auto send<std::string>() -> std::string;
+
+            template <>
+            auto send_async<std::string>() -> ext::task<std::string>;
 
             auto text(
                 std::string&& data,
@@ -96,24 +116,6 @@ namespace http {
                 std::string_view data,
                 const media_type& content_type = media::utf8_text()
             ) -> request&;
-
-            template <typename R>
-            auto try_json() -> std::optional<R> {
-                const auto res = req.perform();
-
-                if (res.status() == 404) return std::nullopt;
-                if (res.ok()) return json::parse(res.data());
-                throw error_code(res.status(), res.data());
-            }
-
-            template <typename R>
-            auto try_json_task() -> ext::task<std::optional<R>> {
-                const auto res = co_await req.perform(*session);
-
-                if (res.status() == 404) co_return std::nullopt;
-                if (res.ok()) co_return json::parse(res.data());
-                throw error_code(res.status(), res.data());
-            }
 
             auto upload(
                 const std::filesystem::path& path,

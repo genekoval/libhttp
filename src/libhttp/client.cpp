@@ -39,9 +39,8 @@ namespace http {
 
     auto client::request::data() -> std::string {
         auto res = req.perform();
-
-        if (res.ok()) return std::move(res).data();
-        throw error_code(res.status(), res.data());
+        res.check_status();
+        return std::move(res).data();
     }
 
     auto client::request::data(
@@ -53,6 +52,12 @@ namespace http {
         return *this;
     }
 
+    auto client::request::data_async() -> ext::task<std::string> {
+        auto res = co_await req.perform(*session);
+        res.check_status();
+        co_return std::move(res).data();
+    }
+
     auto client::request::data_view(
         std::string_view data,
         std::optional<std::reference_wrapper<const media_type>> content_type
@@ -60,13 +65,6 @@ namespace http {
         req.data_view(data);
         if (content_type) req.content_type(content_type->get());
         return *this;
-    }
-
-    auto client::request::data_task() -> ext::task<std::string> {
-        auto res = co_await req.perform(*session);
-
-        if (res.ok()) co_return std::move(res).data();
-        throw error_code(res.status(), res.data());
     }
 
     auto client::request::download(const fs::path& location) -> void {
@@ -97,7 +95,7 @@ namespace http {
         throw error_code(res.status(), "Response piped to stream");
     }
 
-    auto client::request::pipe_task(FILE* file) -> ext::task<> {
+    auto client::request::pipe_async(FILE* file) -> ext::task<> {
         req.pipe(file);
 
         const auto res = co_await req.perform(*session);
@@ -126,14 +124,38 @@ namespace http {
         return contents;
     }
 
-    auto client::request::send() -> void {
-        const auto res = req.perform();
-        if (!res.ok()) throw error_code(res.status(), res.data());
+    template <>
+    auto client::request::send<void>() -> void {
+        req.perform().check_status();
     }
 
-    auto client::request::send_task() -> ext::task<> {
-        const auto res = co_await req.perform(*session);
-        if (!res.ok()) throw error_code(res.status(), res.data());
+    template <>
+    auto client::request::send_async<void>() -> ext::task<> {
+        (co_await req.perform(*session)).check_status();
+    }
+
+    template <>
+    auto client::request::send<std::string>() -> std::string {
+        return text(req.perform());
+    }
+
+    template <>
+    auto client::request::send_async<std::string>() -> ext::task<std::string> {
+        co_return text(co_await req.perform(*session));
+    }
+
+    auto client::request::text(response&& res) -> std::string {
+        res.check_status();
+
+        const auto content_type = res.content_type();
+        if (!content_type) throw error("Missing 'Content-Type' header");
+
+        if (*content_type == media::utf8_text() ||
+            *content_type == media::plain_text()) {
+            return std::move(res).data();
+        }
+
+        throw error("Unsupported content type '{}'", *content_type);
     }
 
     auto client::request::text(

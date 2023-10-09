@@ -1,3 +1,4 @@
+#include <http/error.h>
 #include <http/response.h>
 
 namespace http {
@@ -12,6 +13,10 @@ namespace http {
     response::response(CURL* handle, std::string&& body) :
         handle(handle),
         body(std::forward<std::string>(body)) {}
+
+    auto response::check_status() const -> void {
+        if (!ok()) throw error_code(status(), data());
+    }
 
     auto response::content_length() const noexcept -> long {
         curl_off_t result = 0;

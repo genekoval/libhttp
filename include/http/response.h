@@ -28,6 +28,8 @@ namespace http {
     public:
         response(CURL* handle, std::string&& body);
 
+        auto check_status() const -> void;
+
         auto content_length() const noexcept -> long;
 
         auto content_type() const -> std::optional<media_type>;
