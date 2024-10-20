@@ -5,7 +5,7 @@ include(GitVersion)
 
 project(http
     VERSION ${GIT_VERSION_ABBREV}
-    DESCRIPTION "Zipline serialization and protocol utilities for C++"
+    DESCRIPTION "HTTP client and server library for C++"
     LANGUAGES CXX
 )
 
